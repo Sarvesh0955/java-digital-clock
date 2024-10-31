@@ -467,6 +467,18 @@ class EditAlarmWindow extends JFrame {
         gbc.gridwidth = 2; // Span across two columns
         gbc.anchor = GridBagConstraints.CENTER; // Center the button
         add(saveButton, gbc);
+
+        // Delete Button
+        JButton deleteButton = new JButton("Delete Alarm");
+        deleteButton.addActionListener(e -> {
+            app.removeAlarm(alarm); // Remove the alarm from ClockApp
+            dispose(); // Close the edit window
+        });
+        gbc.gridx = 0;
+        gbc.gridy = 7; // Move the delete button to the next row
+        gbc.gridwidth = 2; // Span across two columns
+        gbc.anchor = GridBagConstraints.CENTER; // Center the button
+        add(deleteButton, gbc);
     }
 }
 
