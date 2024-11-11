@@ -9,46 +9,41 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+// Modify the ClockApp class to be simpler
 public class ClockApp extends JFrame {
     private Clock clock;
     private List<Alarm> alarms;
     private JLabel timeLabel;
-    private JPanel alarmsPanel;
+    private AlarmManagementWindow alarmWindow;
 
     public ClockApp() {
         clock = new Clock();
         alarms = new ArrayList<>();
 
         setTitle("Digital Clock");
-        setSize(400, 300);
+        setSize(400, 200); // Reduced height since we have fewer components
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         // Display current time
         timeLabel = new JLabel(clock.getCurrentTime(), SwingConstants.CENTER);
         timeLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        add(timeLabel, BorderLayout.NORTH);
+        add(timeLabel, BorderLayout.CENTER);
 
-        // Panel to display alarms
-        alarmsPanel = new JPanel();
-        alarmsPanel.setLayout(new BoxLayout(alarmsPanel, BoxLayout.Y_AXIS));
-        updateAlarmsPanel();
-        add(alarmsPanel, BorderLayout.CENTER);
+        // Create button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout());
 
-        // Settings button to change appearance
+        // Settings button
         JButton settingsButton = new JButton("Settings");
         settingsButton.addActionListener(e -> openSettingsWindow());
-        add(settingsButton, BorderLayout.SOUTH);
+        buttonPanel.add(settingsButton);
 
-        // Edit alarm button to modify alarms
-//        JButton editAlarmButton = new JButton("Edit Alarms");
-//        editAlarmButton.addActionListener(e -> openEditAlarmWindow());
-//        add(editAlarmButton, BorderLayout.EAST);
+        // Alarms button
+        JButton alarmsButton = new JButton("Alarms");
+        alarmsButton.addActionListener(e -> openAlarmManagementWindow());
+        buttonPanel.add(alarmsButton);
 
-        // Add Alarm button to add a new alarm
-        JButton addAlarmButton = new JButton("Add Alarm");
-        addAlarmButton.addActionListener(e -> openAddAlarmWindow());
-        add(addAlarmButton, BorderLayout.WEST);
+        add(buttonPanel, BorderLayout.SOUTH);
 
         // Timer to update the clock display every second
         Timer timer = new Timer(1000, e -> updateTime());
@@ -62,52 +57,39 @@ public class ClockApp extends JFrame {
 
     private void checkAlarms() {
         for (Alarm alarm : alarms) {
-            if (clock.getCurrentTime().equals(alarm.getAlarmTime())) {
-                new AlarmRingWindow(alarm, this); // Pass 'this' to the AlarmRingWindow
+            if (clock.checkAlarmHelper().equals(alarm.getAlarmTime())) {
+                new AlarmRingWindow(alarm, this);
             }
         }
     }
-
-
-    protected void updateAlarmsPanel() {
-        alarmsPanel.removeAll();
-        for (Alarm alarm : alarms) {
-            JPanel alarmPanel = new JPanel();
-            alarmPanel.setLayout(new FlowLayout());
-
-            alarmPanel.add(new JLabel("Alarm at " + alarm.getAlarmTime()));
-
-            JButton editButton = new JButton("Edit");
-            editButton.addActionListener(e -> openEditAlarmWindow(alarm)); // Open edit window for this alarm
-            alarmPanel.add(editButton);
-
-            alarmsPanel.add(alarmPanel);
-        }
-        alarmsPanel.revalidate();
-        alarmsPanel.repaint();
-    }
-
 
     private void openSettingsWindow() {
         new ClockSettings(clock, this).setVisible(true);
     }
 
-    private void openEditAlarmWindow(Alarm alarm) {
-        if (alarm != null) {
-            new EditAlarmWindow(alarm, this).setVisible(true);
-        } else {
-            JOptionPane.showMessageDialog(this, "No alarms to edit.");
+    private void openAlarmManagementWindow() {
+        if (alarmWindow == null || !alarmWindow.isVisible()) {
+            alarmWindow = new AlarmManagementWindow(this);
         }
-    }
-
-
-    private void openAddAlarmWindow() {
-        new AddAlarmWindow(this).setVisible(true);
+        alarmWindow.setVisible(true);
     }
 
     public void addAlarm(Alarm alarm) {
         alarms.add(alarm);
-        updateAlarmsPanel();
+        if (alarmWindow != null) {
+            alarmWindow.updateAlarmsList();
+        }
+    }
+
+    public void removeAlarm(Alarm alarm) {
+        alarms.remove(alarm);
+        if (alarmWindow != null) {
+            alarmWindow.updateAlarmsList();
+        }
+    }
+
+    public List<Alarm> getAlarms() {
+        return alarms;
     }
 
     public void setClockTextColor(Color color) {
@@ -125,12 +107,66 @@ public class ClockApp extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new ClockApp().setVisible(true));
     }
+}
 
-    public void removeAlarm(Alarm alarm) {
-        alarms.remove(alarm); // Remove the alarm from the list
-        updateAlarmsPanel(); // Update the display panel
+// Create new AlarmManagementWindow class
+class AlarmManagementWindow extends JFrame {
+    private ClockApp mainApp;
+    private JPanel alarmsPanel;
+
+    public AlarmManagementWindow(ClockApp app) {
+        this.mainApp = app;
+
+        setTitle("Alarm Management");
+        setSize(400, 400);
+        setLayout(new BorderLayout());
+
+        // Create alarms panel
+        alarmsPanel = new JPanel();
+        alarmsPanel.setLayout(new BoxLayout(alarmsPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(alarmsPanel);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Add Alarm button
+        JButton addAlarmButton = new JButton("Add Alarm");
+        addAlarmButton.addActionListener(e -> openAddAlarmWindow());
+        add(addAlarmButton, BorderLayout.SOUTH);
+
+        updateAlarmsList();
     }
 
+    public void updateAlarmsList() {
+        alarmsPanel.removeAll();
+        for (Alarm alarm : mainApp.getAlarms()) {
+            JPanel alarmPanel = new JPanel();
+            alarmPanel.setLayout(new FlowLayout());
+
+            alarmPanel.add(new JLabel("Alarm at " + alarm.getAlarmTime()));
+
+            JButton editButton = new JButton("Edit");
+            editButton.addActionListener(e -> openEditAlarmWindow(alarm));
+            alarmPanel.add(editButton);
+
+            JButton deleteButton = new JButton("Delete");
+            deleteButton.addActionListener(e -> {
+                mainApp.removeAlarm(alarm);
+                updateAlarmsList();
+            });
+            alarmPanel.add(deleteButton);
+
+            alarmsPanel.add(alarmPanel);
+        }
+        alarmsPanel.revalidate();
+        alarmsPanel.repaint();
+    }
+
+    private void openAddAlarmWindow() {
+        new AddAlarmWindow(mainApp).setVisible(true);
+    }
+
+    private void openEditAlarmWindow(Alarm alarm) {
+        new EditAlarmWindow(alarm, mainApp, this).setVisible(true);
+    }
 }
 
 class Clock {
@@ -138,6 +174,10 @@ class Clock {
 
     public String getCurrentTime() {
         return new SimpleDateFormat(displayFormat).format(new Date());
+    }
+
+    public String checkAlarmHelper() {
+        return new SimpleDateFormat("HH:mm:ss").format(new Date());
     }
 
     public void setDisplayFormat(String format) {
@@ -301,71 +341,27 @@ class ClockSettings extends JFrame {
     }
 }
 
-class AlarmRingWindow extends JFrame {
-    private ClockApp app; // Reference to ClockApp
-    private Alarm alarm; // Reference to the alarm
-
-    public AlarmRingWindow(Alarm alarm, ClockApp app) {
-        this.app = app; // Assign the reference
-        this.alarm = alarm; // Assign the alarm
-
-        // Play the alarm tune when the window opens
-        alarm.playAlarmTune();
-
-        setTitle("Alarm Ringing!");
-        setSize(200, 150);
-        setLayout(new FlowLayout());
-
-        JLabel label = new JLabel("Alarm ringing at: " + alarm.getAlarmTime());
-        add(label);
-
-        JButton stopButton = new JButton("Stop");
-        stopButton.addActionListener(e -> {
-            app.removeAlarm(alarm); // Remove alarm from ClockApp
-            dispose(); // Close the window
-        });
-
-        JButton snoozeButton = new JButton("Snooze");
-        snoozeButton.addActionListener(e -> {
-            if (alarm.getNoOfSnoozes() > alarm.snoozedCount) {
-                alarm.snooze();
-                dispose();
-                // You might want to trigger the alarm again here after snooze time
-                // You can use a Timer to wait for snoozeTime minutes then ring the alarm again
-                Timer snoozeTimer = new Timer(alarm.getSnoozeTime() * 60 * 1000, ev -> {
-                    new AlarmRingWindow(alarm, app); // Reopen the AlarmRingWindow
-                    dispose(); // Close the current window
-                });
-                snoozeTimer.setRepeats(false);
-                snoozeTimer.start();
-            } else {
-                JOptionPane.showMessageDialog(this, "No more snoozes allowed.");
-                app.removeAlarm(alarm);
-                dispose(); // Close the window
-            }
-        });
-
-        add(stopButton);
-        add(snoozeButton);
-
-        setVisible(true);
-    }
-}
-
-
 class EditAlarmWindow extends JFrame {
-    public EditAlarmWindow(Alarm alarm, ClockApp app) {
+    private final Alarm alarm;
+    private final ClockApp app;
+    private final AlarmManagementWindow parentWindow;
+
+    public EditAlarmWindow(Alarm alarm, ClockApp app, AlarmManagementWindow parentWindow) {
+        this.alarm = alarm;
+        this.app = app;
+        this.parentWindow = parentWindow;
+
         setTitle("Edit Alarm");
-        setSize(400, 350); // Increased size for better display
+        setSize(400, 350);
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10); // Add some padding
+        gbc.insets = new Insets(10, 10, 10, 10);
 
         // Hour selection
         JLabel hourLabel = new JLabel("Hour:");
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(hourLabel, gbc);
 
         Integer[] hours = new Integer[24];
@@ -373,17 +369,17 @@ class EditAlarmWindow extends JFrame {
             hours[i] = i;
         }
         JComboBox<Integer> hourComboBox = new JComboBox<>(hours);
-        hourComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(0, 2))); // Set hour from alarm time
+        hourComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(0, 2)));
         gbc.gridx = 1;
         gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(hourComboBox, gbc);
 
         // Minute selection
         JLabel minuteLabel = new JLabel("Minute:");
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(minuteLabel, gbc);
 
         Integer[] minutes = new Integer[60];
@@ -391,23 +387,23 @@ class EditAlarmWindow extends JFrame {
             minutes[i] = i;
         }
         JComboBox<Integer> minuteComboBox = new JComboBox<>(minutes);
-        minuteComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(3, 5))); // Set minute from alarm time
+        minuteComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(3, 5)));
         gbc.gridx = 1;
         gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(minuteComboBox, gbc);
 
         // Alarm Tune
         JLabel tuneLabel = new JLabel("Alarm Tune:");
         gbc.gridx = 0;
         gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(tuneLabel, gbc);
 
-        JTextField tuneField = new JTextField(alarm.getAlarmTune(), 15); // Specified width
+        JTextField tuneField = new JTextField(alarm.getAlarmTune(), 15);
         gbc.gridx = 1;
         gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(tuneField, gbc);
 
         // Button to choose alarm tune
@@ -417,38 +413,38 @@ class EditAlarmWindow extends JFrame {
             int returnValue = fileChooser.showOpenDialog(this);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
-                tuneField.setText(selectedFile.getAbsolutePath()); // Set path to text field
+                tuneField.setText(selectedFile.getAbsolutePath());
             }
         });
         gbc.gridx = 1;
-        gbc.gridy = 3; // Move the button to the next row
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.WEST;
         add(tuneButton, gbc);
 
         // Snooze Time
         JLabel snoozeLabel = new JLabel("Snooze Time (min):");
         gbc.gridx = 0;
         gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(snoozeLabel, gbc);
 
-        JTextField snoozeField = new JTextField(String.valueOf(alarm.getSnoozeTime()), 5); // Specified width
+        JTextField snoozeField = new JTextField(String.valueOf(alarm.getSnoozeTime()), 5);
         gbc.gridx = 1;
         gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(snoozeField, gbc);
 
         // Number of Snoozes
         JLabel noOfSnoozesLabel = new JLabel("No. of Snoozes:");
         gbc.gridx = 0;
         gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(noOfSnoozesLabel, gbc);
 
-        JTextField noOfSnoozesField = new JTextField(String.valueOf(alarm.getNoOfSnoozes()), 5); // Specified width
+        JTextField noOfSnoozesField = new JTextField(String.valueOf(alarm.getNoOfSnoozes()), 5);
         gbc.gridx = 1;
         gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(noOfSnoozesField, gbc);
 
         // Save Button
@@ -459,45 +455,42 @@ class EditAlarmWindow extends JFrame {
             alarm.setAlarmTune(tuneField.getText());
             alarm.setSnoozeTime(Integer.parseInt(snoozeField.getText()));
             alarm.setNoOfSnoozes(Integer.parseInt(noOfSnoozesField.getText()));
-            app.updateAlarmsPanel();
+            parentWindow.updateAlarmsList();
             dispose();
         });
         gbc.gridx = 0;
         gbc.gridy = 6;
-        gbc.gridwidth = 2; // Span across two columns
-        gbc.anchor = GridBagConstraints.CENTER; // Center the button
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
         add(saveButton, gbc);
 
         // Delete Button
         JButton deleteButton = new JButton("Delete Alarm");
         deleteButton.addActionListener(e -> {
-            app.removeAlarm(alarm); // Remove the alarm from ClockApp
-            dispose(); // Close the edit window
+            app.removeAlarm(alarm);
+            dispose();
         });
         gbc.gridx = 0;
-        gbc.gridy = 7; // Move the delete button to the next row
-        gbc.gridwidth = 2; // Span across two columns
-        gbc.anchor = GridBagConstraints.CENTER; // Center the button
+        gbc.gridy = 7;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
         add(deleteButton, gbc);
     }
 }
 
-
-
-
 class AddAlarmWindow extends JFrame {
     public AddAlarmWindow(ClockApp app) {
         setTitle("Add Alarm");
-        setSize(400, 350); // Increased size for better display
+        setSize(400, 350);
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10); // Add some padding
+        gbc.insets = new Insets(10, 10, 10, 10);
 
         // Hour selection
         JLabel hourLabel = new JLabel("Hour:");
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(hourLabel, gbc);
 
         Integer[] hours = new Integer[24];
@@ -507,14 +500,14 @@ class AddAlarmWindow extends JFrame {
         JComboBox<Integer> hourComboBox = new JComboBox<>(hours);
         gbc.gridx = 1;
         gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(hourComboBox, gbc);
 
         // Minute selection
         JLabel minuteLabel = new JLabel("Minute:");
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(minuteLabel, gbc);
 
         Integer[] minutes = new Integer[60];
@@ -524,20 +517,20 @@ class AddAlarmWindow extends JFrame {
         JComboBox<Integer> minuteComboBox = new JComboBox<>(minutes);
         gbc.gridx = 1;
         gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(minuteComboBox, gbc);
 
         // Alarm Tune
         JLabel tuneLabel = new JLabel("Alarm Tune:");
         gbc.gridx = 0;
         gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(tuneLabel, gbc);
 
-        JTextField tuneField = new JTextField("D:\\Java\\clock\\AlarmSound\\default_alarm.WAV", 15); // Specified width
+        JTextField tuneField = new JTextField("D:\\Java\\clock\\AlarmSound\\default_alarm.WAV", 15);
         gbc.gridx = 1;
         gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(tuneField, gbc);
 
         JButton tuneButton = new JButton("Choose Tune");
@@ -551,33 +544,33 @@ class AddAlarmWindow extends JFrame {
         });
         gbc.gridx = 1;
         gbc.gridy = 3;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(tuneButton, gbc);
 
         // Snooze Time
         JLabel snoozeLabel = new JLabel("Snooze Time (min):");
         gbc.gridx = 0;
         gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(snoozeLabel, gbc);
 
         JTextField snoozeField = new JTextField("1", 5);
         gbc.gridx = 1;
         gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(snoozeField, gbc);
 
         // Number of Snoozes
         JLabel noOfSnoozesLabel = new JLabel("No. of Snoozes:");
         gbc.gridx = 0;
         gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.EAST; // Align to the right
+        gbc.anchor = GridBagConstraints.EAST;
         add(noOfSnoozesLabel, gbc);
 
         JTextField noOfSnoozesField = new JTextField("1", 5);
         gbc.gridx = 1;
         gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.WEST; // Align to the left
+        gbc.anchor = GridBagConstraints.WEST;
         add(noOfSnoozesField, gbc);
 
         // Add Alarm Button
@@ -585,7 +578,7 @@ class AddAlarmWindow extends JFrame {
         saveButton.addActionListener(e -> {
             int hour = (int) hourComboBox.getSelectedItem();
             int minute = (int) minuteComboBox.getSelectedItem();
-            String time = String.format("%02d:%02d:00", hour, minute); // Format as HH:mm:ss
+            String time = String.format("%02d:%02d:00", hour, minute);
             String tune = tuneField.getText();
             int snoozeTime = Integer.parseInt(snoozeField.getText());
             int noOfSnoozes = Integer.parseInt(noOfSnoozesField.getText());
@@ -596,8 +589,74 @@ class AddAlarmWindow extends JFrame {
         });
         gbc.gridx = 0;
         gbc.gridy = 6;
-        gbc.gridwidth = 2; // Span across two columns
-        gbc.anchor = GridBagConstraints.CENTER; // Center the button
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
         add(saveButton, gbc);
+    }
+}
+
+class AlarmRingWindow extends JFrame {
+    private final ClockApp app;
+    private final Alarm alarm;
+
+    public AlarmRingWindow(Alarm alarm, ClockApp app) {
+        this.app = app;
+        this.alarm = alarm;
+
+        alarm.playAlarmTune();
+
+        setTitle("Alarm Ringing!");
+        setSize(300, 150);
+        setLayout(new BorderLayout(10, 10));
+
+        // Center panel for alarm info
+        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JLabel timeLabel = new JLabel("Time: " + alarm.getAlarmTime());
+        timeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        centerPanel.add(timeLabel);
+
+        JLabel snoozeLabel = new JLabel("Snoozes remaining: " +
+                (alarm.getNoOfSnoozes() - alarm.snoozedCount));
+        snoozeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        centerPanel.add(snoozeLabel);
+
+        add(centerPanel, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+
+        JButton stopButton = new JButton("Stop");
+        stopButton.addActionListener(e -> {
+            app.removeAlarm(alarm);
+            dispose();
+        });
+        buttonPanel.add(stopButton);
+
+        JButton snoozeButton = new JButton("Snooze");
+        snoozeButton.addActionListener(e -> {
+            if (alarm.getNoOfSnoozes() > alarm.snoozedCount) {
+                alarm.snooze();
+                dispose();
+                Timer snoozeTimer = new Timer(alarm.getSnoozeTime() * 60 * 1000, ev -> {
+                    new AlarmRingWindow(alarm, app);
+                });
+                snoozeTimer.setRepeats(false);
+                snoozeTimer.start();
+            } else {
+                JOptionPane.showMessageDialog(this, "No more snoozes remaining!");
+                app.removeAlarm(alarm);
+                dispose();
+            }
+        });
+        buttonPanel.add(snoozeButton);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        // Center the window on screen
+        setLocationRelativeTo(null);
+        setVisible(true);
+        setAlwaysOnTop(true);
     }
 }
