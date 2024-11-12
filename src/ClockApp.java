@@ -2,6 +2,7 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -9,43 +10,147 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-// Modify the ClockApp class to be simpler
 public class ClockApp extends JFrame {
     private Clock clock;
     private List<Alarm> alarms;
     private JLabel timeLabel;
     private AlarmManagementWindow alarmWindow;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font DIGITAL_FONT = new Font("DS-Digital", Font.BOLD, 72);
+    private final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 14);
+    private JPanel timePanel; // Add this field
 
     public ClockApp() {
         clock = new Clock();
         alarms = new ArrayList<>();
 
+        setupMainWindow();
+        setupTimeDisplay();
+        setupButtonPanel();
+        startClockTimer();
+    }
+
+    private void setupMainWindow() {
         setTitle("Digital Clock");
-        setSize(400, 200); // Reduced height since we have fewer components
+        setSize(500, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(20, 20));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(new EmptyBorder(20, 20, 20, 20));
+        setLocationRelativeTo(null);
+    }
 
-        // Display current time
+    private void setupTimeDisplay() {
+        timePanel = new JPanel(new BorderLayout());
+        timePanel.setBackground(DARK_BG);
+
         timeLabel = new JLabel(clock.getCurrentTime(), SwingConstants.CENTER);
-        timeLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        add(timeLabel, BorderLayout.CENTER);
+        try {
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("fonts/DS-Digital.ttf")));
+            timeLabel.setFont(DIGITAL_FONT);
+        } catch (Exception e) {
+            timeLabel.setFont(new Font("Monospaced", Font.BOLD, 72));
+        }
 
-        // Create button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
+        timeLabel.setForeground(NEON_PURPLE);
+        timeLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 2),
+                new EmptyBorder(20, 40, 20, 40)
+        ));
 
-        // Settings button
-        JButton settingsButton = new JButton("Settings");
+        // Add glow effect
+        timePanel.add(createGlowEffect(), BorderLayout.NORTH);
+        timePanel.add(timeLabel, BorderLayout.CENTER);
+        add(timePanel, BorderLayout.CENTER);
+    }
+
+    private JPanel createGlowEffect() {
+        JPanel glowPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int width = getWidth();
+                int height = getHeight();
+
+                // Create gradient for glow effect
+                GradientPaint glow = new GradientPaint(
+                        width/2, 0, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 50),
+                        width/2, height, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 0)
+                );
+                g2d.setPaint(glow);
+                g2d.fillRect(0, 0, width, height);
+            }
+        };
+        glowPanel.setPreferredSize(new Dimension(0, 20));
+        glowPanel.setOpaque(false);
+        return glowPanel;
+    }
+
+    private JButton createStyledButton(String text, Color mainColor) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Button gradient background
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, mainColor.darker(),
+                        0, getHeight(), mainColor.darker().darker()
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+
+                // Glow effect
+                g2d.setColor(new Color(mainColor.getRed(), mainColor.getGreen(), mainColor.getBlue(), 50));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 20, 20);
+
+                // Text
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(DEFAULT_FONT);
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+            }
+        };
+
+        button.setPreferredSize(new Dimension(120, 40));
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setForeground(Color.WHITE);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        return button;
+    }
+
+    private void setupButtonPanel() {
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
+        buttonPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
+
+        JButton settingsButton = createStyledButton("Settings", NEON_BLUE);
         settingsButton.addActionListener(e -> openSettingsWindow());
-        buttonPanel.add(settingsButton);
 
-        // Alarms button
-        JButton alarmsButton = new JButton("Alarms");
+        JButton alarmsButton = createStyledButton("Alarms", NEON_PURPLE);
         alarmsButton.addActionListener(e -> openAlarmManagementWindow());
+
+        buttonPanel.add(settingsButton);
         buttonPanel.add(alarmsButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
+    }
 
-        // Timer to update the clock display every second
+    private void startClockTimer() {
         Timer timer = new Timer(1000, e -> updateTime());
         timer.start();
     }
@@ -55,6 +160,7 @@ public class ClockApp extends JFrame {
         checkAlarms();
     }
 
+    // Rest of the methods remain the same
     private void checkAlarms() {
         for (Alarm alarm : alarms) {
             if (clock.checkAlarmHelper().equals(alarm.getAlarmTime())) {
@@ -96,15 +202,58 @@ public class ClockApp extends JFrame {
         timeLabel.setForeground(color);
     }
 
+    public Color getClockTextColor(){
+        return timeLabel.getForeground();
+    }
+
     public void setBackgroundColor(Color color) {
+        // Update all panel backgrounds
         getContentPane().setBackground(color);
+        timePanel.setBackground(color);
+
+        // Update all child components that need the background color
+        for (Component comp : getContentPane().getComponents()) {
+            if (comp instanceof JPanel) {
+                updatePanelBackground((JPanel)comp, color);
+            }
+        }
+
+        // Repaint the entire frame
+        SwingUtilities.invokeLater(() -> {
+            revalidate();
+            repaint();
+        });
+    }
+
+    public Color getBackgroundColor(){
+        return timePanel.getBackground();
+    }
+
+    private void updatePanelBackground(JPanel panel, Color color) {
+        panel.setBackground(color);
+        // Recursively update nested panels
+        for (Component comp : panel.getComponents()) {
+            if (comp instanceof JPanel) {
+                updatePanelBackground((JPanel)comp, color);
+            }
+        }
     }
 
     public void setFrameWidth(int width) {
         setSize(width, getHeight());
     }
 
+    public int getFrameWidth(){
+        return this.getWidth();
+    }
+
     public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         SwingUtilities.invokeLater(() -> new ClockApp().setVisible(true));
     }
 }
@@ -113,24 +262,60 @@ public class ClockApp extends JFrame {
 class AlarmManagementWindow extends JFrame {
     private ClockApp mainApp;
     private JPanel alarmsPanel;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font WINDOW_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
     public AlarmManagementWindow(ClockApp app) {
         this.mainApp = app;
 
         setTitle("Alarm Management");
-        setSize(400, 400);
-        setLayout(new BorderLayout());
+        setSize(400, 500);
+        setLocationRelativeTo(app);
 
-        // Create alarms panel
+        setLayout(new BorderLayout(10, 10));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Create main panel
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout(0, 15));
+        mainPanel.setBackground(DARK_BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
+        // Create header
+        JLabel headerLabel = new JLabel("Your Alarms", SwingConstants.CENTER);
+        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        headerLabel.setForeground(Color.WHITE);
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
+        mainPanel.add(headerLabel, BorderLayout.NORTH);
+
+        // Create alarms panel with custom styling
         alarmsPanel = new JPanel();
         alarmsPanel.setLayout(new BoxLayout(alarmsPanel, BoxLayout.Y_AXIS));
-        JScrollPane scrollPane = new JScrollPane(alarmsPanel);
-        add(scrollPane, BorderLayout.CENTER);
+        alarmsPanel.setBackground(DARK_BG);
 
-        // Add Alarm button
-        JButton addAlarmButton = new JButton("Add Alarm");
+        // Style the scroll pane
+        JScrollPane scrollPane = new JScrollPane(alarmsPanel);
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 2),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        scrollPane.setBackground(DARK_BG);
+        scrollPane.getViewport().setBackground(DARK_BG);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // Create button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
+
+        JButton addAlarmButton = createStyledButton("Add New Alarm");
         addAlarmButton.addActionListener(e -> openAddAlarmWindow());
-        add(addAlarmButton, BorderLayout.SOUTH);
+        buttonPanel.add(addAlarmButton);
+
+        add(mainPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
 
         updateAlarmsList();
     }
@@ -138,26 +323,103 @@ class AlarmManagementWindow extends JFrame {
     public void updateAlarmsList() {
         alarmsPanel.removeAll();
         for (Alarm alarm : mainApp.getAlarms()) {
-            JPanel alarmPanel = new JPanel();
-            alarmPanel.setLayout(new FlowLayout());
-
-            alarmPanel.add(new JLabel("Alarm at " + alarm.getAlarmTime()));
-
-            JButton editButton = new JButton("Edit");
-            editButton.addActionListener(e -> openEditAlarmWindow(alarm));
-            alarmPanel.add(editButton);
-
-            JButton deleteButton = new JButton("Delete");
-            deleteButton.addActionListener(e -> {
-                mainApp.removeAlarm(alarm);
-                updateAlarmsList();
-            });
-            alarmPanel.add(deleteButton);
-
+            JPanel alarmPanel = createStyledAlarmPanel(alarm);
             alarmsPanel.add(alarmPanel);
+            alarmsPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Add spacing between alarms
         }
         alarmsPanel.revalidate();
         alarmsPanel.repaint();
+    }
+
+    private JPanel createStyledAlarmPanel(Alarm alarm) {
+        JPanel alarmPanel = new JPanel();
+        alarmPanel.setLayout(new BorderLayout(10, 0));
+        alarmPanel.setBackground(DARK_BG.brighter());
+        alarmPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_PURPLE, 1),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        alarmPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+        // Time and tune panel
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
+        infoPanel.setBackground(DARK_BG.brighter());
+
+        JLabel timeLabel = new JLabel("⏰ " + alarm.getAlarmTime());
+        timeLabel.setFont(WINDOW_FONT);
+        timeLabel.setForeground(Color.WHITE);
+
+        JLabel tuneLabel = new JLabel("🎵 " + new File(alarm.getAlarmTune()).getName());
+        tuneLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tuneLabel.setForeground(Color.LIGHT_GRAY);
+
+        infoPanel.add(timeLabel);
+        infoPanel.add(tuneLabel);
+        alarmPanel.add(infoPanel, BorderLayout.CENTER);
+
+        // Buttons panel
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonsPanel.setBackground(DARK_BG.brighter());
+
+        JButton editButton = createStyledButton("Edit");
+        editButton.addActionListener(e -> openEditAlarmWindow(alarm));
+
+        JButton deleteButton = createStyledButton("Delete");
+        deleteButton.setBackground(new Color(255, 69, 58).darker());
+        deleteButton.addActionListener(e -> {
+            int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this alarm?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+            if (choice == JOptionPane.YES_OPTION) {
+                mainApp.removeAlarm(alarm);
+                updateAlarmsList();
+            }
+        });
+
+        buttonsPanel.add(editButton);
+        buttonsPanel.add(deleteButton);
+        alarmPanel.add(buttonsPanel, BorderLayout.EAST);
+
+        return alarmPanel;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+
+        button.setForeground(Color.BLACK);
+        button.setBackground(NEON_BLUE.darker());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add these to ensure button styling is consistent
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+
+        // Ensure text stays black in all states
+        button.addChangeListener(e -> {
+            button.setForeground(Color.BLACK);
+        });
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE);
+                button.setForeground(Color.BLACK);  // Keep text black on hover
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE.darker());
+                button.setForeground(Color.BLACK);  // Keep text black when not hovering
+            }
+        });
+
+        return button;
     }
 
     private void openAddAlarmWindow() {
@@ -168,6 +430,7 @@ class AlarmManagementWindow extends JFrame {
         new EditAlarmWindow(alarm, mainApp, this).setVisible(true);
     }
 }
+
 
 class Clock {
     private String displayFormat = "HH:mm:ss"; // Default to 24-hour format
@@ -196,6 +459,9 @@ class Alarm {
     private int snoozeTime;
     private int noOfSnoozes;
     protected int snoozedCount;
+    private Clip clip;
+    Timer snoozeTimer;
+    private boolean isSnoozing = false;
 
     public Alarm(String time, String tune, int snooze, int noOfSnoozes) {
         this.alarmTime = time;
@@ -238,11 +504,11 @@ class Alarm {
     }
 
     public void snooze() {
-        if (snoozedCount < noOfSnoozes) { // Check if snooze limit is not reached
-            snoozedCount++; // Increment the snoozed count
+        if (snoozedCount < noOfSnoozes) {
+            snoozedCount++;
             String[] timeParts = alarmTime.split(":");
             int hour = Integer.parseInt(timeParts[0]);
-            int minute = Integer.parseInt(timeParts[1]) + snoozeTime; // Add snooze time
+            int minute = Integer.parseInt(timeParts[1]) + snoozeTime;
 
             // Handle minute overflow
             if (minute >= 60) {
@@ -255,21 +521,44 @@ class Alarm {
 
             // Set the new alarm time after snoozing
             alarmTime = String.format("%02d:%02d:00", hour, minute);
+            isSnoozing = true;
             System.out.println("Alarm snoozed for " + snoozeTime + " minutes. New time: " + alarmTime);
         } else {
             System.out.println("No more snoozes allowed.");
         }
     }
 
+    // Add these methods to Alarm class
+    public void cancelSnooze() {
+        if (snoozeTimer != null) {
+            snoozeTimer.stop();
+            snoozeTimer = null;
+        }
+        isSnoozing = false;
+    }
+
+    public boolean isSnoozing() {
+        return isSnoozing;
+    }
+
     public void playAlarmTune() {
         try {
-            File audioFile = new File(alarmTune); // Use the alarmTune path
+            File audioFile = new File(alarmTune);
             AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
-            Clip clip = AudioSystem.getClip();
+            clip = AudioSystem.getClip();
             clip.open(audioStream);
+            clip.loop(Clip.LOOP_CONTINUOUSLY); // Make it loop continuously
             clip.start();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // Add this method to stop the alarm
+    public void stopAlarmTune() {
+        if (clip != null && clip.isRunning()) {
+            clip.stop();
+            clip.close();
         }
     }
 
@@ -277,180 +566,346 @@ class Alarm {
 
 
 class ClockSettings extends JFrame {
-    private Color textColor = Color.BLACK;
-    private Color backgroundColor = Color.WHITE;
-    private int frameWidth = 400;
+    private Color textColor;
+    private Color backgroundColor;
+    private int frameWidth;
+    private final ClockApp app;
+    private final Clock clock;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font SETTINGS_FONT = new Font("Segoe UI", Font.PLAIN, 14);
+    private JPanel previewPanel;
+    private JLabel previewLabel;
+
+    // Store initial settings for comparison
+    private Color initialTextColor;
+    private Color initialBackgroundColor;
+    private int initialFrameWidth;
 
     public ClockSettings(Clock clock, ClockApp app) {
-        setTitle("Clock Settings");
-        setSize(300, 300);
-        setLayout(new GridLayout(5, 2));
+        this.clock = clock;
+        this.app = app;
+        this.textColor = app.getClockTextColor(); // Default text color
+        this.backgroundColor = app.getBackgroundColor() ; // Default background color
+        this.frameWidth = app.getFrameWidth();
 
-        // Time format setting
+        // Save initial settings
+        initialTextColor = textColor;
+        initialBackgroundColor = backgroundColor;
+        initialFrameWidth = frameWidth;
+
+        setupSettingsWindow();
+    }
+
+    private void setupSettingsWindow() {
+        setTitle("Clock Settings");
+        setSize(400, 500);
+        setLocationRelativeTo(app);
+
+        setLayout(new BorderLayout(10, 10));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Main settings panel
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(DARK_BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
+        // Preview Panel
+        setupPreviewPanel();
+
+        // Settings Options
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setLayout(new GridLayout(4, 1, 10, 15));
+        settingsPanel.setBackground(DARK_BG);
+        settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+
+        // Time Format Setting
+        JPanel formatPanel = createSettingPanel("Time Format:");
         String[] formats = {"12-Hour", "24-Hour"};
-        JComboBox<String> formatComboBox = new JComboBox<>(formats);
+        JComboBox<String> formatComboBox = createStyledComboBox(formats);
         formatComboBox.addActionListener(e -> {
             clock.setDisplayFormat((String) formatComboBox.getSelectedItem());
+            updatePreview();
         });
+        formatPanel.add(formatComboBox);
+        settingsPanel.add(formatPanel);
 
-        add(new JLabel("Time Format:"));
-        add(formatComboBox);
-
-        // Text color setting
-        JButton textColorButton = new JButton("Choose Text Color");
+        // Text Color Setting
+        JPanel textColorPanel = createSettingPanel("Text Color:");
+        JButton textColorButton = createStyledButton("Choose Color");
         textColorButton.addActionListener(e -> {
-            Color chosenColor = JColorChooser.showDialog(this, "Choose Text Color", textColor);
-            if (chosenColor != null) {
-                textColor = chosenColor;
+            Color newColor = JColorChooser.showDialog(this, "Choose Text Color", textColor);
+            if (newColor != null) {
+                textColor = newColor;
+                previewLabel.setForeground(textColor);
+                updatePreview();
             }
         });
+        textColorPanel.add(textColorButton);
+        settingsPanel.add(textColorPanel);
 
-        add(new JLabel("Text Color:"));
-        add(textColorButton);
-
-        // Background color setting
-        JButton bgColorButton = new JButton("Choose Background Color");
+        // Background Color Setting
+        JPanel bgColorPanel = createSettingPanel("Background Color:");
+        JButton bgColorButton = createStyledButton("Choose Color");
         bgColorButton.addActionListener(e -> {
-            Color chosenColor = JColorChooser.showDialog(this, "Choose Background Color", backgroundColor);
-            if (chosenColor != null) {
-                backgroundColor = chosenColor;
+            Color newColor = JColorChooser.showDialog(this, "Choose Background Color", backgroundColor);
+            if (newColor != null) {
+                backgroundColor = newColor;
+                previewPanel.setBackground(backgroundColor);
+                updatePreview();
             }
         });
+        bgColorPanel.add(bgColorButton);
+        settingsPanel.add(bgColorPanel);
 
-        add(new JLabel("Background Color:"));
-        add(bgColorButton);
+        // Frame Width Setting
+        JPanel widthPanel = createSettingPanel("Frame Width:");
+        JSlider widthSlider = new JSlider(JSlider.HORIZONTAL, 400, 800, frameWidth);
+        widthSlider.setBackground(DARK_BG);
+        widthSlider.setForeground(Color.WHITE);
+        widthSlider.setMajorTickSpacing(100);
+        widthSlider.setMinorTickSpacing(50);
+        widthSlider.setPaintTicks(true);
+        widthSlider.setPaintLabels(true);
+        widthSlider.addChangeListener(e -> {
+            frameWidth = widthSlider.getValue();
+            updatePreview();
+        });
+        widthPanel.add(widthSlider);
+        settingsPanel.add(widthPanel);
 
-        // Frame width setting
-        JSpinner frameWidthSpinner = new JSpinner(new SpinnerNumberModel(400, 300, 800, 50));
-        frameWidthSpinner.addChangeListener(e -> frameWidth = (int) frameWidthSpinner.getValue());
+        // Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
 
-        add(new JLabel("Frame Width:"));
-        add(frameWidthSpinner);
-
-        // Save button to apply settings
-        JButton saveButton = new JButton("Save Settings");
+        JButton saveButton = createStyledButton("Save Changes");
         saveButton.addActionListener(e -> {
-            app.setClockTextColor(textColor);
-            app.setBackgroundColor(backgroundColor);
-            app.setFrameWidth(frameWidth);
+            applySettings();
             dispose();
         });
 
-        add(new JLabel());
-        add(saveButton);
+        JButton cancelButton = createStyledButton("Cancel");
+        cancelButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        mainPanel.add(previewPanel);
+        mainPanel.add(settingsPanel);
+
+        add(mainPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private void setupPreviewPanel() {
+        previewPanel = new JPanel(new BorderLayout());
+        previewPanel.setBackground(backgroundColor);
+        previewPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 2),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        previewPanel.setPreferredSize(new Dimension(0, 100));
+
+        previewLabel = new JLabel(clock.getCurrentTime(), SwingConstants.CENTER);
+        previewLabel.setFont(new Font("DS-Digital", Font.BOLD, 48));
+        previewLabel.setForeground(textColor);
+
+        previewPanel.add(previewLabel, BorderLayout.CENTER);
+
+        // Start timer to update preview
+        Timer previewTimer = new Timer(1000, e -> updatePreview());
+        previewTimer.start();
+    }
+
+    private JPanel createSettingPanel(String labelText) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panel.setBackground(DARK_BG);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(SETTINGS_FONT);
+        label.setForeground(Color.WHITE);
+        panel.add(label);
+
+        return panel;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(SETTINGS_FONT);
+        button.setForeground(Color.BLACK); // Change text color to black
+        button.setBackground(NEON_BLUE.darker());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE.darker());
+            }
+        });
+
+        return button;
+    }
+
+    private JComboBox<String> createStyledComboBox(String[] items) {
+        JComboBox<String> comboBox = new JComboBox<>(items);
+        comboBox.setFont(SETTINGS_FONT);
+        comboBox.setForeground(Color.BLACK);  // Change text color to black
+        comboBox.setBackground(NEON_BLUE);   // Change background color for contrast
+        comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
+
+        // Style the dropdown
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
+                setForeground(Color.WHITE);
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return this;
+            }
+        });
+
+        return comboBox;
+    }
+
+    private void updatePreview() {
+        previewLabel.setText(clock.getCurrentTime());
+    }
+
+    private void applySettings() {
+        // Apply settings only if they have changed
+        if (!textColor.equals(initialTextColor)) {
+            app.setClockTextColor(textColor);
+        }
+
+        if (!backgroundColor.equals(initialBackgroundColor)) {
+            app.setBackgroundColor(backgroundColor);
+        }
+
+        if (frameWidth != initialFrameWidth) {
+            app.setFrameWidth(frameWidth);
+        }
+
+        // Update the app window
+        app.revalidate();
+        app.repaint();
     }
 }
+
 
 class EditAlarmWindow extends JFrame {
     private final Alarm alarm;
     private final ClockApp app;
     private final AlarmManagementWindow parentWindow;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font SETTINGS_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
     public EditAlarmWindow(Alarm alarm, ClockApp app, AlarmManagementWindow parentWindow) {
         this.alarm = alarm;
         this.app = app;
         this.parentWindow = parentWindow;
 
+        setupWindow();
+    }
+
+    private void setupWindow() {
         setTitle("Edit Alarm");
-        setSize(400, 350);
-        setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        setSize(600, 450);
+        setLocationRelativeTo(app);
 
-        // Hour selection
-        JLabel hourLabel = new JLabel("Hour:");
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(hourLabel, gbc);
+        setLayout(new BorderLayout(10, 10));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Main Panel
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(DARK_BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
+        // Settings Panel
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setLayout(new GridLayout(6, 1, 10, 15));
+        settingsPanel.setBackground(DARK_BG);
+        settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+
+        // Time Settings
+        JPanel timePanel = createSettingPanel("Time Settings");
+        JPanel hourMinutePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        hourMinutePanel.setBackground(DARK_BG);
+
+        // Hour Selector
         Integer[] hours = new Integer[24];
-        for (int i = 0; i < 24; i++) {
-            hours[i] = i;
-        }
-        JComboBox<Integer> hourComboBox = new JComboBox<>(hours);
+        for (int i = 0; i < 24; i++) hours[i] = i;
+        JComboBox<Integer> hourComboBox = createStyledComboBox(hours);
         hourComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(0, 2)));
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(hourComboBox, gbc);
+        JLabel hourLabel = createStyledLabel("Hour:");
+        hourMinutePanel.add(hourLabel);
+        hourMinutePanel.add(hourComboBox);
 
-        // Minute selection
-        JLabel minuteLabel = new JLabel("Minute:");
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(minuteLabel, gbc);
-
+        // Minute Selector
         Integer[] minutes = new Integer[60];
-        for (int i = 0; i < 60; i++) {
-            minutes[i] = i;
-        }
-        JComboBox<Integer> minuteComboBox = new JComboBox<>(minutes);
+        for (int i = 0; i < 60; i++) minutes[i] = i;
+        JComboBox<Integer> minuteComboBox = createStyledComboBox(minutes);
         minuteComboBox.setSelectedItem(Integer.parseInt(alarm.getAlarmTime().substring(3, 5)));
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(minuteComboBox, gbc);
+        JLabel minuteLabel = createStyledLabel("Minute:");
+        hourMinutePanel.add(Box.createHorizontalStrut(20));
+        hourMinutePanel.add(minuteLabel);
+        hourMinutePanel.add(minuteComboBox);
 
-        // Alarm Tune
-        JLabel tuneLabel = new JLabel("Alarm Tune:");
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(tuneLabel, gbc);
+        timePanel.add(hourMinutePanel);
+        settingsPanel.add(timePanel);
 
-        JTextField tuneField = new JTextField(alarm.getAlarmTune(), 15);
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(tuneField, gbc);
-
-        // Button to choose alarm tune
-        JButton tuneButton = new JButton("Choose Tune");
+        // Alarm Tune Setting
+        JPanel tunePanel = createSettingPanel("Alarm Tune");
+        JTextField tuneField = createStyledTextField(alarm.getAlarmTune());
+        JButton tuneButton = createStyledButton("Choose Tune");
         tuneButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
-            int returnValue = fileChooser.showOpenDialog(this);
-            if (returnValue == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fileChooser.getSelectedFile();
-                tuneField.setText(selectedFile.getAbsolutePath());
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                tuneField.setText(fileChooser.getSelectedFile().getAbsolutePath());
             }
         });
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(tuneButton, gbc);
+        tunePanel.add(tuneField);
+        tunePanel.add(tuneButton);
+        settingsPanel.add(tunePanel);
 
-        // Snooze Time
-        JLabel snoozeLabel = new JLabel("Snooze Time (min):");
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(snoozeLabel, gbc);
+        // Snooze Time Setting
+        JPanel snoozePanel = createSettingPanel("Snooze Time (minutes)");
+        JTextField snoozeField = createStyledTextField(String.valueOf(alarm.getSnoozeTime()));
+        snoozePanel.add(snoozeField);
+        settingsPanel.add(snoozePanel);
 
-        JTextField snoozeField = new JTextField(String.valueOf(alarm.getSnoozeTime()), 5);
-        gbc.gridx = 1;
-        gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(snoozeField, gbc);
+        // Number of Snoozes Setting
+        JPanel snoozesPanel = createSettingPanel("Number of Snoozes");
+        JTextField noOfSnoozesField = createStyledTextField(String.valueOf(alarm.getNoOfSnoozes()));
+        snoozesPanel.add(noOfSnoozesField);
+        settingsPanel.add(snoozesPanel);
 
-        // Number of Snoozes
-        JLabel noOfSnoozesLabel = new JLabel("No. of Snoozes:");
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(noOfSnoozesLabel, gbc);
+        mainPanel.add(settingsPanel);
 
-        JTextField noOfSnoozesField = new JTextField(String.valueOf(alarm.getNoOfSnoozes()), 5);
-        gbc.gridx = 1;
-        gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(noOfSnoozesField, gbc);
+        // Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
 
-        // Save Button
-        JButton saveButton = new JButton("Save");
+        JButton saveButton = createStyledButton("Save Changes");
         saveButton.addActionListener(e -> {
-            String time = String.format("%02d:%02d:00", hourComboBox.getSelectedItem(), minuteComboBox.getSelectedItem());
+            String time = String.format("%02d:%02d:00",
+                    hourComboBox.getSelectedItem(),
+                    minuteComboBox.getSelectedItem());
             alarm.setAlarmTime(time);
             alarm.setAlarmTune(tuneField.getText());
             alarm.setSnoozeTime(Integer.parseInt(snoozeField.getText()));
@@ -458,166 +913,342 @@ class EditAlarmWindow extends JFrame {
             parentWindow.updateAlarmsList();
             dispose();
         });
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        add(saveButton, gbc);
 
-        // Delete Button
-        JButton deleteButton = new JButton("Delete Alarm");
+        JButton deleteButton = createStyledButton("Delete Alarm");
+        deleteButton.setBackground(new Color(255, 69, 58));
         deleteButton.addActionListener(e -> {
             app.removeAlarm(alarm);
             dispose();
         });
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        add(deleteButton, gbc);
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(deleteButton);
+
+        add(mainPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createSettingPanel(String labelText) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panel.setBackground(DARK_BG);
+
+        JLabel label = createStyledLabel(labelText);
+        panel.add(label);
+
+        return panel;
+    }
+
+    private JLabel createStyledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SETTINGS_FONT);
+        label.setForeground(Color.WHITE);
+        return label;
+    }
+
+    private JTextField createStyledTextField(String text) {
+        JTextField textField = new JTextField(text, 20);
+        textField.setFont(SETTINGS_FONT);
+        textField.setForeground(Color.BLACK);
+        textField.setBackground(Color.WHITE.brighter());
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        return textField;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(SETTINGS_FONT);
+        button.setForeground(Color.BLACK);
+        button.setBackground(NEON_BLUE.darker());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE.darker());
+            }
+        });
+
+        return button;
+    }
+
+    private JComboBox<Integer> createStyledComboBox(Integer[] items) {
+        JComboBox<Integer> comboBox = new JComboBox<>(items);
+        comboBox.setFont(SETTINGS_FONT);
+        comboBox.setForeground(Color.BLACK);
+        comboBox.setBackground(DARK_BG.brighter());
+        comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
+
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
+                setForeground(Color.WHITE);
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return this;
+            }
+        });
+
+        return comboBox;
     }
 }
 
+
 class AddAlarmWindow extends JFrame {
+    private final ClockApp app;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font SETTINGS_FONT = new Font("Segoe UI", Font.PLAIN, 14);
+
     public AddAlarmWindow(ClockApp app) {
+        this.app = app;
+        setupWindow();
+    }
+
+    private void setupWindow() {
         setTitle("Add Alarm");
-        setSize(400, 350);
-        setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        setSize(600, 450);
+        setLocationRelativeTo(app);
 
-        // Hour selection
-        JLabel hourLabel = new JLabel("Hour:");
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(hourLabel, gbc);
+        setLayout(new BorderLayout(10, 10));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Main Panel
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(DARK_BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
+        // Settings Panel
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setLayout(new GridLayout(6, 1, 10, 15));
+        settingsPanel.setBackground(DARK_BG);
+        settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+
+        // Time Settings
+        JPanel timePanel = createSettingPanel("Time Settings");
+        JPanel hourMinutePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        hourMinutePanel.setBackground(DARK_BG);
+
+        // Hour Selector
         Integer[] hours = new Integer[24];
-        for (int i = 0; i < 24; i++) {
-            hours[i] = i;
-        }
-        JComboBox<Integer> hourComboBox = new JComboBox<>(hours);
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(hourComboBox, gbc);
+        for (int i = 0; i < 24; i++) hours[i] = i;
+        JComboBox<Integer> hourComboBox = createStyledComboBox(hours);
+        JLabel hourLabel = createStyledLabel("Hour:");
+        hourMinutePanel.add(hourLabel);
+        hourMinutePanel.add(hourComboBox);
 
-        // Minute selection
-        JLabel minuteLabel = new JLabel("Minute:");
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(minuteLabel, gbc);
-
+        // Minute Selector
         Integer[] minutes = new Integer[60];
-        for (int i = 0; i < 60; i++) {
-            minutes[i] = i;
-        }
-        JComboBox<Integer> minuteComboBox = new JComboBox<>(minutes);
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(minuteComboBox, gbc);
+        for (int i = 0; i < 60; i++) minutes[i] = i;
+        JComboBox<Integer> minuteComboBox = createStyledComboBox(minutes);
+        JLabel minuteLabel = createStyledLabel("Minute:");
+        hourMinutePanel.add(Box.createHorizontalStrut(20));
+        hourMinutePanel.add(minuteLabel);
+        hourMinutePanel.add(minuteComboBox);
 
-        // Alarm Tune
-        JLabel tuneLabel = new JLabel("Alarm Tune:");
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(tuneLabel, gbc);
+        timePanel.add(hourMinutePanel);
+        settingsPanel.add(timePanel);
 
-        JTextField tuneField = new JTextField("D:\\Java\\clock\\AlarmSound\\default_alarm.WAV", 15);
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(tuneField, gbc);
-
-        JButton tuneButton = new JButton("Choose Tune");
+        // Alarm Tune Setting
+        JPanel tunePanel = createSettingPanel("Alarm Tune");
+        JTextField tuneField = createStyledTextField("D:\\Java\\clock\\AlarmSound\\default_alarm.WAV");
+        JButton tuneButton = createStyledButton("Choose Tune");
         tuneButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
-            int returnValue = fileChooser.showOpenDialog(this);
-            if (returnValue == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fileChooser.getSelectedFile();
-                tuneField.setText(selectedFile.getAbsolutePath());
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                tuneField.setText(fileChooser.getSelectedFile().getAbsolutePath());
             }
         });
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(tuneButton, gbc);
+        tunePanel.add(tuneField);
+        tunePanel.add(tuneButton);
+        settingsPanel.add(tunePanel);
 
-        // Snooze Time
-        JLabel snoozeLabel = new JLabel("Snooze Time (min):");
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(snoozeLabel, gbc);
+        // Snooze Time Setting
+        JPanel snoozePanel = createSettingPanel("Snooze Time (minutes)");
+        JTextField snoozeField = createStyledTextField("1");
+        snoozePanel.add(snoozeField);
+        settingsPanel.add(snoozePanel);
 
-        JTextField snoozeField = new JTextField("1", 5);
-        gbc.gridx = 1;
-        gbc.gridy = 4;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(snoozeField, gbc);
+        // Number of Snoozes Setting
+        JPanel snoozesPanel = createSettingPanel("Number of Snoozes");
+        JTextField noOfSnoozesField = createStyledTextField("1");
+        snoozesPanel.add(noOfSnoozesField);
+        settingsPanel.add(snoozesPanel);
 
-        // Number of Snoozes
-        JLabel noOfSnoozesLabel = new JLabel("No. of Snoozes:");
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(noOfSnoozesLabel, gbc);
+        mainPanel.add(settingsPanel);
 
-        JTextField noOfSnoozesField = new JTextField("1", 5);
-        gbc.gridx = 1;
-        gbc.gridy = 5;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(noOfSnoozesField, gbc);
+        // Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
 
-        // Add Alarm Button
-        JButton saveButton = new JButton("Add Alarm");
+        JButton saveButton = createStyledButton("Add Alarm");
         saveButton.addActionListener(e -> {
-            int hour = (int) hourComboBox.getSelectedItem();
-            int minute = (int) minuteComboBox.getSelectedItem();
-            String time = String.format("%02d:%02d:00", hour, minute);
-            String tune = tuneField.getText();
-            int snoozeTime = Integer.parseInt(snoozeField.getText());
-            int noOfSnoozes = Integer.parseInt(noOfSnoozesField.getText());
-
-            Alarm newAlarm = new Alarm(time, tune, snoozeTime, noOfSnoozes);
+            String time = String.format("%02d:%02d:00",
+                    hourComboBox.getSelectedItem(),
+                    minuteComboBox.getSelectedItem());
+            Alarm newAlarm = new Alarm(
+                    time,
+                    tuneField.getText(),
+                    Integer.parseInt(snoozeField.getText()),
+                    Integer.parseInt(noOfSnoozesField.getText())
+            );
             app.addAlarm(newAlarm);
             dispose();
         });
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        add(saveButton, gbc);
+
+        JButton cancelButton = createStyledButton("Cancel");
+        cancelButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        add(mainPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createSettingPanel(String labelText) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panel.setBackground(DARK_BG);
+
+        JLabel label = createStyledLabel(labelText);
+        panel.add(label);
+
+        return panel;
+    }
+
+    private JLabel createStyledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SETTINGS_FONT);
+        label.setForeground(Color.WHITE);
+        return label;
+    }
+
+    private JTextField createStyledTextField(String text) {
+        JTextField textField = new JTextField(text, 20);
+        textField.setFont(SETTINGS_FONT);
+        textField.setForeground(Color.BLACK);
+        textField.setBackground(Color.WHITE.brighter());
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        return textField;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(SETTINGS_FONT);
+        button.setForeground(Color.BLACK);
+        button.setBackground(NEON_BLUE.darker());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add these to ensure button styling is consistent
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+
+        // Ensure text stays black in all states
+        button.addChangeListener(e -> {
+            button.setForeground(Color.BLACK);
+        });
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE);
+                button.setForeground(Color.BLACK);  // Keep text black on hover
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE.darker());
+                button.setForeground(Color.BLACK);  // Keep text black when not hovering
+            }
+        });
+
+        return button;
+    }
+
+    private JComboBox<Integer> createStyledComboBox(Integer[] items) {
+        JComboBox<Integer> comboBox = new JComboBox<>(items);
+        comboBox.setFont(SETTINGS_FONT);
+        comboBox.setForeground(Color.BLACK);
+        comboBox.setBackground(DARK_BG.brighter());
+        comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
+
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
+                setForeground(Color.WHITE);
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return this;
+            }
+        });
+
+        return comboBox;
     }
 }
 
 class AlarmRingWindow extends JFrame {
     private final ClockApp app;
     private final Alarm alarm;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_BLUE = new Color(3, 218, 247);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font SETTINGS_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
     public AlarmRingWindow(Alarm alarm, ClockApp app) {
         this.app = app;
         this.alarm = alarm;
 
-        alarm.playAlarmTune();
+        if (alarm.isSnoozing()) {
+            return;
+        }
 
+        alarm.playAlarmTune();
+        setupWindow();
+    }
+
+    private void setupWindow() {
         setTitle("Alarm Ringing!");
-        setSize(300, 150);
+        setSize(400, 300);
         setLayout(new BorderLayout(10, 10));
+        setLocationRelativeTo(null);
+
+        setAlwaysOnTop(true);
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Center panel for alarm info
-        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        centerPanel.setBackground(DARK_BG);
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(15, 10, 15, 10));
 
-        JLabel timeLabel = new JLabel("Time: " + alarm.getAlarmTime());
+        // Time Label
+        JLabel timeLabel = createStyledLabel("Time: " + alarm.getAlarmTime());
         timeLabel.setHorizontalAlignment(SwingConstants.CENTER);
         centerPanel.add(timeLabel);
 
-        JLabel snoozeLabel = new JLabel("Snoozes remaining: " +
+        // Snooze Label
+        JLabel snoozeLabel = createStyledLabel("Snoozes remaining: " +
                 (alarm.getNoOfSnoozes() - alarm.snoozedCount));
         snoozeLabel.setHorizontalAlignment(SwingConstants.CENTER);
         centerPanel.add(snoozeLabel);
@@ -625,38 +1256,120 @@ class AlarmRingWindow extends JFrame {
         add(centerPanel, BorderLayout.CENTER);
 
         // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
 
-        JButton stopButton = new JButton("Stop");
+        JButton stopButton = createStyledButton("Stop");
         stopButton.addActionListener(e -> {
+            alarm.stopAlarmTune();
             app.removeAlarm(alarm);
             dispose();
         });
-        buttonPanel.add(stopButton);
 
-        JButton snoozeButton = new JButton("Snooze");
+
+        JButton snoozeButton = createStyledButton("Snooze");
         snoozeButton.addActionListener(e -> {
             if (alarm.getNoOfSnoozes() > alarm.snoozedCount) {
+                // Cancel any existing snooze timer
+                alarm.cancelSnooze();
+
+                // Start new snooze timer
                 alarm.snooze();
+                alarm.stopAlarmTune(); // Stop current alarm sound
                 dispose();
+
                 Timer snoozeTimer = new Timer(alarm.getSnoozeTime() * 60 * 1000, ev -> {
-                    new AlarmRingWindow(alarm, app);
+                    // Check if window is already open or alarm is already ringing
+                    if (!alarm.isSnoozing()) {
+                        return;
+                    }
+                    SwingUtilities.invokeLater(() -> {
+                        new AlarmRingWindow(alarm, app).setVisible(true);
+                    });
+                    alarm.cancelSnooze(); // Reset snooze state after alarm rings
                 });
+                alarm.snoozeTimer = snoozeTimer; // Store reference to timer
                 snoozeTimer.setRepeats(false);
                 snoozeTimer.start();
             } else {
-                JOptionPane.showMessageDialog(this, "No more snoozes remaining!");
+                showStyledErrorDialog("No more snoozes remaining!");
                 app.removeAlarm(alarm);
+                alarm.stopAlarmTune();
                 dispose();
             }
         });
+
+
         buttonPanel.add(snoozeButton);
+        buttonPanel.add(stopButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
-
-        // Center the window on screen
-        setLocationRelativeTo(null);
         setVisible(true);
-        setAlwaysOnTop(true);
+    }
+
+    private JLabel createStyledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SETTINGS_FONT);
+        label.setForeground(Color.WHITE);
+        return label;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(SETTINGS_FONT);
+        button.setForeground(Color.BLACK);
+        button.setBackground(NEON_BLUE.darker());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_BLUE, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add these to ensure button styling is consistent
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+
+        // Ensure text stays black in all states
+        button.addChangeListener(e -> {
+            button.setForeground(Color.BLACK);
+        });
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE);
+                button.setForeground(Color.BLACK);  // Keep text black on hover
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(NEON_BLUE.darker());
+                button.setForeground(Color.BLACK);  // Keep text black when not hovering
+            }
+        });
+
+        return button;
+    }
+
+    private void showStyledErrorDialog(String message) {
+        JDialog dialog = new JDialog(this, "Error", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.getContentPane().setBackground(DARK_BG);
+
+        JLabel messageLabel = createStyledLabel(message);
+        messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        messageLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JButton okButton = createStyledButton("OK");
+        okButton.addActionListener(e -> dialog.dispose());
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBackground(DARK_BG);
+        buttonPanel.add(okButton);
+
+        dialog.add(messageLabel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setSize(300, 150);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }
