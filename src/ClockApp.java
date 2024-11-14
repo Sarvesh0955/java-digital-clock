@@ -20,12 +20,11 @@ public class ClockApp extends JFrame {
     private final Color DARK_BG = new Color(18, 18, 18);
     private final Font DIGITAL_FONT = new Font("DS-Digital", Font.BOLD, 72);
     private final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 14);
-    private JPanel timePanel; // Add this field
+    private JPanel timePanel;
 
     public ClockApp() {
         clock = new Clock();
         alarms = new ArrayList<>();
-
         setupMainWindow();
         setupTimeDisplay();
         setupButtonPanel();
@@ -45,7 +44,6 @@ public class ClockApp extends JFrame {
     private void setupTimeDisplay() {
         timePanel = new JPanel(new BorderLayout());
         timePanel.setBackground(DARK_BG);
-
         timeLabel = new JLabel(clock.getCurrentTime(), SwingConstants.CENTER);
         try {
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -54,14 +52,11 @@ public class ClockApp extends JFrame {
         } catch (Exception e) {
             timeLabel.setFont(new Font("Monospaced", Font.BOLD, 72));
         }
-
         timeLabel.setForeground(NEON_PURPLE);
         timeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(NEON_BLUE, 2),
                 new EmptyBorder(20, 40, 20, 40)
         ));
-
-        // Add glow effect
         timePanel.add(createGlowEffect(), BorderLayout.NORTH);
         timePanel.add(timeLabel, BorderLayout.CENTER);
         add(timePanel, BorderLayout.CENTER);
@@ -74,14 +69,11 @@ public class ClockApp extends JFrame {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                 int width = getWidth();
                 int height = getHeight();
-
-                // Create gradient for glow effect
                 GradientPaint glow = new GradientPaint(
-                        width/2, 0, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 50),
-                        width/2, height, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 0)
+                        width / 2, 0, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 50),
+                        width / 2, height, new Color(NEON_PURPLE.getRed(), NEON_PURPLE.getGreen(), NEON_PURPLE.getBlue(), 0)
                 );
                 g2d.setPaint(glow);
                 g2d.fillRect(0, 0, width, height);
@@ -98,21 +90,12 @@ public class ClockApp extends JFrame {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Button gradient background
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, mainColor.darker(),
-                        0, getHeight(), mainColor.darker().darker()
-                );
+                GradientPaint gradient = new GradientPaint(0, 0, mainColor.darker(), 0, getHeight(), mainColor.darker().darker());
                 g2d.setPaint(gradient);
                 g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-
-                // Glow effect
                 g2d.setColor(new Color(mainColor.getRed(), mainColor.getGreen(), mainColor.getBlue(), 50));
                 g2d.setStroke(new BasicStroke(2));
                 g2d.drawRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 20, 20);
-
-                // Text
                 g2d.setColor(Color.WHITE);
                 g2d.setFont(DEFAULT_FONT);
                 FontMetrics fm = g2d.getFontMetrics();
@@ -121,14 +104,12 @@ public class ClockApp extends JFrame {
                 g2d.drawString(getText(), textX, textY);
             }
         };
-
         button.setPreferredSize(new Dimension(120, 40));
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setFocusPainted(false);
         button.setForeground(Color.WHITE);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         return button;
     }
 
@@ -137,16 +118,12 @@ public class ClockApp extends JFrame {
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
         buttonPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
-
         JButton settingsButton = createStyledButton("Settings", NEON_BLUE);
         settingsButton.addActionListener(e -> openSettingsWindow());
-
         JButton alarmsButton = createStyledButton("Alarms", NEON_PURPLE);
         alarmsButton.addActionListener(e -> openAlarmManagementWindow());
-
         buttonPanel.add(settingsButton);
         buttonPanel.add(alarmsButton);
-
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -160,7 +137,6 @@ public class ClockApp extends JFrame {
         checkAlarms();
     }
 
-    // Rest of the methods remain the same
     private void checkAlarms() {
         for (Alarm alarm : alarms) {
             if (clock.checkAlarmHelper().equals(alarm.getAlarmTime())) {
@@ -202,39 +178,33 @@ public class ClockApp extends JFrame {
         timeLabel.setForeground(color);
     }
 
-    public Color getClockTextColor(){
+    public Color getClockTextColor() {
         return timeLabel.getForeground();
     }
 
     public void setBackgroundColor(Color color) {
-        // Update all panel backgrounds
         getContentPane().setBackground(color);
         timePanel.setBackground(color);
-
-        // Update all child components that need the background color
         for (Component comp : getContentPane().getComponents()) {
             if (comp instanceof JPanel) {
-                updatePanelBackground((JPanel)comp, color);
+                updatePanelBackground((JPanel) comp, color);
             }
         }
-
-        // Repaint the entire frame
         SwingUtilities.invokeLater(() -> {
             revalidate();
             repaint();
         });
     }
 
-    public Color getBackgroundColor(){
+    public Color getBackgroundColor() {
         return timePanel.getBackground();
     }
 
     private void updatePanelBackground(JPanel panel, Color color) {
         panel.setBackground(color);
-        // Recursively update nested panels
         for (Component comp : panel.getComponents()) {
             if (comp instanceof JPanel) {
-                updatePanelBackground((JPanel)comp, color);
+                updatePanelBackground((JPanel) comp, color);
             }
         }
     }
@@ -243,7 +213,7 @@ public class ClockApp extends JFrame {
         setSize(width, getHeight());
     }
 
-    public int getFrameWidth(){
+    public int getFrameWidth() {
         return this.getWidth();
     }
 
@@ -253,12 +223,10 @@ public class ClockApp extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         SwingUtilities.invokeLater(() -> new ClockApp().setVisible(true));
     }
 }
 
-// Create new AlarmManagementWindow class
 class AlarmManagementWindow extends JFrame {
     private ClockApp mainApp;
     private JPanel alarmsPanel;
@@ -269,34 +237,28 @@ class AlarmManagementWindow extends JFrame {
 
     public AlarmManagementWindow(ClockApp app) {
         this.mainApp = app;
-
         setTitle("Alarm Management");
         setSize(400, 500);
         setLocationRelativeTo(app);
-
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(DARK_BG);
         getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Create main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout(0, 15));
         mainPanel.setBackground(DARK_BG);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
-        // Create header
         JLabel headerLabel = new JLabel("Your Alarms", SwingConstants.CENTER);
         headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         headerLabel.setForeground(Color.WHITE);
         headerLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
         mainPanel.add(headerLabel, BorderLayout.NORTH);
 
-        // Create alarms panel with custom styling
         alarmsPanel = new JPanel();
         alarmsPanel.setLayout(new BoxLayout(alarmsPanel, BoxLayout.Y_AXIS));
         alarmsPanel.setBackground(DARK_BG);
 
-        // Style the scroll pane
         JScrollPane scrollPane = new JScrollPane(alarmsPanel);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(NEON_BLUE, 2),
@@ -306,7 +268,6 @@ class AlarmManagementWindow extends JFrame {
         scrollPane.getViewport().setBackground(DARK_BG);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Create button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
 
@@ -325,7 +286,7 @@ class AlarmManagementWindow extends JFrame {
         for (Alarm alarm : mainApp.getAlarms()) {
             JPanel alarmPanel = createStyledAlarmPanel(alarm);
             alarmsPanel.add(alarmPanel);
-            alarmsPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Add spacing between alarms
+            alarmsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         alarmsPanel.revalidate();
         alarmsPanel.repaint();
@@ -341,7 +302,6 @@ class AlarmManagementWindow extends JFrame {
         ));
         alarmPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
-        // Time and tune panel
         JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         infoPanel.setBackground(DARK_BG.brighter());
 
@@ -357,7 +317,6 @@ class AlarmManagementWindow extends JFrame {
         infoPanel.add(tuneLabel);
         alarmPanel.add(infoPanel, BorderLayout.CENTER);
 
-        // Buttons panel
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         buttonsPanel.setBackground(DARK_BG.brighter());
 
@@ -389,7 +348,6 @@ class AlarmManagementWindow extends JFrame {
 
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
-
         button.setForeground(Color.BLACK);
         button.setBackground(NEON_BLUE.darker());
         button.setBorder(BorderFactory.createCompoundBorder(
@@ -398,27 +356,17 @@ class AlarmManagementWindow extends JFrame {
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Add these to ensure button styling is consistent
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-
-        // Ensure text stays black in all states
-        button.addChangeListener(e -> {
-            button.setForeground(Color.BLACK);
-        });
-
+        button.addChangeListener(e -> button.setForeground(Color.BLACK));
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE);
-                button.setForeground(Color.BLACK);  // Keep text black on hover
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE.darker());
-                button.setForeground(Color.BLACK);  // Keep text black when not hovering
             }
         });
-
         return button;
     }
 
@@ -431,9 +379,8 @@ class AlarmManagementWindow extends JFrame {
     }
 }
 
-
 class Clock {
-    private String displayFormat = "HH:mm:ss"; // Default to 24-hour format
+    private String displayFormat = "HH:mm:ss";
 
     public String getCurrentTime() {
         return new SimpleDateFormat(displayFormat).format(new Date());
@@ -450,7 +397,6 @@ class Clock {
             displayFormat = "HH:mm:ss";
         }
     }
-
 }
 
 class Alarm {
@@ -510,16 +456,12 @@ class Alarm {
             int hour = Integer.parseInt(timeParts[0]);
             int minute = Integer.parseInt(timeParts[1]) + snoozeTime;
 
-            // Handle minute overflow
             if (minute >= 60) {
                 hour += minute / 60;
                 minute = minute % 60;
             }
 
-            // Handle hour overflow (keep in 24-hour format)
             hour = hour % 24;
-
-            // Set the new alarm time after snoozing
             alarmTime = String.format("%02d:%02d:00", hour, minute);
             isSnoozing = true;
             System.out.println("Alarm snoozed for " + snoozeTime + " minutes. New time: " + alarmTime);
@@ -528,7 +470,6 @@ class Alarm {
         }
     }
 
-    // Add these methods to Alarm class
     public void cancelSnooze() {
         if (snoozeTimer != null) {
             snoozeTimer.stop();
@@ -547,23 +488,20 @@ class Alarm {
             AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
             clip = AudioSystem.getClip();
             clip.open(audioStream);
-            clip.loop(Clip.LOOP_CONTINUOUSLY); // Make it loop continuously
+            clip.loop(Clip.LOOP_CONTINUOUSLY);
             clip.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // Add this method to stop the alarm
     public void stopAlarmTune() {
         if (clip != null && clip.isRunning()) {
             clip.stop();
             clip.close();
         }
     }
-
 }
-
 
 class ClockSettings extends JFrame {
     private Color textColor;
@@ -578,7 +516,6 @@ class ClockSettings extends JFrame {
     private JPanel previewPanel;
     private JLabel previewLabel;
 
-    // Store initial settings for comparison
     private Color initialTextColor;
     private Color initialBackgroundColor;
     private int initialFrameWidth;
@@ -586,15 +523,12 @@ class ClockSettings extends JFrame {
     public ClockSettings(Clock clock, ClockApp app) {
         this.clock = clock;
         this.app = app;
-        this.textColor = app.getClockTextColor(); // Default text color
-        this.backgroundColor = app.getBackgroundColor() ; // Default background color
+        this.textColor = app.getClockTextColor();
+        this.backgroundColor = app.getBackgroundColor();
         this.frameWidth = app.getFrameWidth();
-
-        // Save initial settings
         initialTextColor = textColor;
         initialBackgroundColor = backgroundColor;
         initialFrameWidth = frameWidth;
-
         setupSettingsWindow();
     }
 
@@ -602,27 +536,21 @@ class ClockSettings extends JFrame {
         setTitle("Clock Settings");
         setSize(400, 500);
         setLocationRelativeTo(app);
-
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(DARK_BG);
         getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Main settings panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(DARK_BG);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-
-        // Preview Panel
         setupPreviewPanel();
 
-        // Settings Options
         JPanel settingsPanel = new JPanel();
         settingsPanel.setLayout(new GridLayout(4, 1, 10, 15));
         settingsPanel.setBackground(DARK_BG);
         settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
 
-        // Time Format Setting
         JPanel formatPanel = createSettingPanel("Time Format:");
         String[] formats = {"12-Hour", "24-Hour"};
         JComboBox<String> formatComboBox = createStyledComboBox(formats);
@@ -633,7 +561,6 @@ class ClockSettings extends JFrame {
         formatPanel.add(formatComboBox);
         settingsPanel.add(formatPanel);
 
-        // Text Color Setting
         JPanel textColorPanel = createSettingPanel("Text Color:");
         JButton textColorButton = createStyledButton("Choose Color");
         textColorButton.addActionListener(e -> {
@@ -647,7 +574,6 @@ class ClockSettings extends JFrame {
         textColorPanel.add(textColorButton);
         settingsPanel.add(textColorPanel);
 
-        // Background Color Setting
         JPanel bgColorPanel = createSettingPanel("Background Color:");
         JButton bgColorButton = createStyledButton("Choose Color");
         bgColorButton.addActionListener(e -> {
@@ -661,7 +587,6 @@ class ClockSettings extends JFrame {
         bgColorPanel.add(bgColorButton);
         settingsPanel.add(bgColorPanel);
 
-        // Frame Width Setting
         JPanel widthPanel = createSettingPanel("Frame Width:");
         JSlider widthSlider = new JSlider(JSlider.HORIZONTAL, 400, 800, frameWidth);
         widthSlider.setBackground(DARK_BG);
@@ -677,25 +602,20 @@ class ClockSettings extends JFrame {
         widthPanel.add(widthSlider);
         settingsPanel.add(widthPanel);
 
-        // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
-
         JButton saveButton = createStyledButton("Save Changes");
         saveButton.addActionListener(e -> {
             applySettings();
             dispose();
         });
-
         JButton cancelButton = createStyledButton("Cancel");
         cancelButton.addActionListener(e -> dispose());
-
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
 
         mainPanel.add(previewPanel);
         mainPanel.add(settingsPanel);
-
         add(mainPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }
@@ -708,14 +628,10 @@ class ClockSettings extends JFrame {
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
         previewPanel.setPreferredSize(new Dimension(0, 100));
-
         previewLabel = new JLabel(clock.getCurrentTime(), SwingConstants.CENTER);
         previewLabel.setFont(new Font("DS-Digital", Font.BOLD, 48));
         previewLabel.setForeground(textColor);
-
         previewPanel.add(previewLabel, BorderLayout.CENTER);
-
-        // Start timer to update preview
         Timer previewTimer = new Timer(1000, e -> updatePreview());
         previewTimer.start();
     }
@@ -723,19 +639,17 @@ class ClockSettings extends JFrame {
     private JPanel createSettingPanel(String labelText) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panel.setBackground(DARK_BG);
-
         JLabel label = new JLabel(labelText);
         label.setFont(SETTINGS_FONT);
         label.setForeground(Color.WHITE);
         panel.add(label);
-
         return panel;
     }
 
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
         button.setFont(SETTINGS_FONT);
-        button.setForeground(Color.BLACK); // Change text color to black
+        button.setForeground(Color.BLACK);
         button.setBackground(NEON_BLUE.darker());
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(NEON_BLUE, 1),
@@ -743,7 +657,6 @@ class ClockSettings extends JFrame {
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE);
@@ -752,22 +665,18 @@ class ClockSettings extends JFrame {
                 button.setBackground(NEON_BLUE.darker());
             }
         });
-
         return button;
     }
 
     private JComboBox<String> createStyledComboBox(String[] items) {
         JComboBox<String> comboBox = new JComboBox<>(items);
         comboBox.setFont(SETTINGS_FONT);
-        comboBox.setForeground(Color.BLACK);  // Change text color to black
-        comboBox.setBackground(NEON_BLUE);   // Change background color for contrast
+        comboBox.setForeground(Color.BLACK);
+        comboBox.setBackground(NEON_BLUE);
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-
-        // Style the dropdown
         comboBox.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                          int index, boolean isSelected, boolean cellHasFocus) {
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
                 setForeground(Color.WHITE);
@@ -775,7 +684,6 @@ class ClockSettings extends JFrame {
                 return this;
             }
         });
-
         return comboBox;
     }
 
@@ -784,25 +692,19 @@ class ClockSettings extends JFrame {
     }
 
     private void applySettings() {
-        // Apply settings only if they have changed
         if (!textColor.equals(initialTextColor)) {
             app.setClockTextColor(textColor);
         }
-
         if (!backgroundColor.equals(initialBackgroundColor)) {
             app.setBackgroundColor(backgroundColor);
         }
-
         if (frameWidth != initialFrameWidth) {
             app.setFrameWidth(frameWidth);
         }
-
-        // Update the app window
         app.revalidate();
         app.repaint();
     }
 }
-
 
 class EditAlarmWindow extends JFrame {
     private final Alarm alarm;
@@ -817,7 +719,6 @@ class EditAlarmWindow extends JFrame {
         this.alarm = alarm;
         this.app = app;
         this.parentWindow = parentWindow;
-
         setupWindow();
     }
 
@@ -825,29 +726,24 @@ class EditAlarmWindow extends JFrame {
         setTitle("Edit Alarm");
         setSize(600, 450);
         setLocationRelativeTo(app);
-
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(DARK_BG);
         getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Main Panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(DARK_BG);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
-        // Settings Panel
         JPanel settingsPanel = new JPanel();
         settingsPanel.setLayout(new GridLayout(6, 1, 10, 15));
         settingsPanel.setBackground(DARK_BG);
         settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
 
-        // Time Settings
         JPanel timePanel = createSettingPanel("Time Settings");
         JPanel hourMinutePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         hourMinutePanel.setBackground(DARK_BG);
 
-        // Hour Selector
         Integer[] hours = new Integer[24];
         for (int i = 0; i < 24; i++) hours[i] = i;
         JComboBox<Integer> hourComboBox = createStyledComboBox(hours);
@@ -856,7 +752,6 @@ class EditAlarmWindow extends JFrame {
         hourMinutePanel.add(hourLabel);
         hourMinutePanel.add(hourComboBox);
 
-        // Minute Selector
         Integer[] minutes = new Integer[60];
         for (int i = 0; i < 60; i++) minutes[i] = i;
         JComboBox<Integer> minuteComboBox = createStyledComboBox(minutes);
@@ -869,7 +764,6 @@ class EditAlarmWindow extends JFrame {
         timePanel.add(hourMinutePanel);
         settingsPanel.add(timePanel);
 
-        // Alarm Tune Setting
         JPanel tunePanel = createSettingPanel("Alarm Tune");
         JTextField tuneField = createStyledTextField(alarm.getAlarmTune());
         JButton tuneButton = createStyledButton("Choose Tune");
@@ -883,13 +777,11 @@ class EditAlarmWindow extends JFrame {
         tunePanel.add(tuneButton);
         settingsPanel.add(tunePanel);
 
-        // Snooze Time Setting
         JPanel snoozePanel = createSettingPanel("Snooze Time (minutes)");
         JTextField snoozeField = createStyledTextField(String.valueOf(alarm.getSnoozeTime()));
         snoozePanel.add(snoozeField);
         settingsPanel.add(snoozePanel);
 
-        // Number of Snoozes Setting
         JPanel snoozesPanel = createSettingPanel("Number of Snoozes");
         JTextField noOfSnoozesField = createStyledTextField(String.valueOf(alarm.getNoOfSnoozes()));
         snoozesPanel.add(noOfSnoozesField);
@@ -897,15 +789,11 @@ class EditAlarmWindow extends JFrame {
 
         mainPanel.add(settingsPanel);
 
-        // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
-
         JButton saveButton = createStyledButton("Save Changes");
         saveButton.addActionListener(e -> {
-            String time = String.format("%02d:%02d:00",
-                    hourComboBox.getSelectedItem(),
-                    minuteComboBox.getSelectedItem());
+            String time = String.format("%02d:%02d:00", hourComboBox.getSelectedItem(), minuteComboBox.getSelectedItem());
             alarm.setAlarmTime(time);
             alarm.setAlarmTune(tuneField.getText());
             alarm.setSnoozeTime(Integer.parseInt(snoozeField.getText()));
@@ -923,7 +811,6 @@ class EditAlarmWindow extends JFrame {
 
         buttonPanel.add(saveButton);
         buttonPanel.add(deleteButton);
-
         add(mainPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }
@@ -931,10 +818,8 @@ class EditAlarmWindow extends JFrame {
     private JPanel createSettingPanel(String labelText) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panel.setBackground(DARK_BG);
-
         JLabel label = createStyledLabel(labelText);
         panel.add(label);
-
         return panel;
     }
 
@@ -968,7 +853,6 @@ class EditAlarmWindow extends JFrame {
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE);
@@ -977,7 +861,6 @@ class EditAlarmWindow extends JFrame {
                 button.setBackground(NEON_BLUE.darker());
             }
         });
-
         return button;
     }
 
@@ -987,11 +870,9 @@ class EditAlarmWindow extends JFrame {
         comboBox.setForeground(Color.BLACK);
         comboBox.setBackground(DARK_BG.brighter());
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-
         comboBox.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                          int index, boolean isSelected, boolean cellHasFocus) {
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
                 setForeground(Color.WHITE);
@@ -999,11 +880,9 @@ class EditAlarmWindow extends JFrame {
                 return this;
             }
         });
-
         return comboBox;
     }
 }
-
 
 class AddAlarmWindow extends JFrame {
     private final ClockApp app;
@@ -1021,29 +900,24 @@ class AddAlarmWindow extends JFrame {
         setTitle("Add Alarm");
         setSize(600, 450);
         setLocationRelativeTo(app);
-
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(DARK_BG);
         getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Main Panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(DARK_BG);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
-        // Settings Panel
         JPanel settingsPanel = new JPanel();
         settingsPanel.setLayout(new GridLayout(6, 1, 10, 15));
         settingsPanel.setBackground(DARK_BG);
         settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
 
-        // Time Settings
         JPanel timePanel = createSettingPanel("Time Settings");
         JPanel hourMinutePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         hourMinutePanel.setBackground(DARK_BG);
 
-        // Hour Selector
         Integer[] hours = new Integer[24];
         for (int i = 0; i < 24; i++) hours[i] = i;
         JComboBox<Integer> hourComboBox = createStyledComboBox(hours);
@@ -1051,7 +925,6 @@ class AddAlarmWindow extends JFrame {
         hourMinutePanel.add(hourLabel);
         hourMinutePanel.add(hourComboBox);
 
-        // Minute Selector
         Integer[] minutes = new Integer[60];
         for (int i = 0; i < 60; i++) minutes[i] = i;
         JComboBox<Integer> minuteComboBox = createStyledComboBox(minutes);
@@ -1063,9 +936,8 @@ class AddAlarmWindow extends JFrame {
         timePanel.add(hourMinutePanel);
         settingsPanel.add(timePanel);
 
-        // Alarm Tune Setting
         JPanel tunePanel = createSettingPanel("Alarm Tune");
-        JTextField tuneField = createStyledTextField("D:\\Java\\clock\\AlarmSound\\default_alarm.WAV");
+        JTextField tuneField = createStyledTextField("D:\\Java\\clock2\\AlarmSound\\default_alarm.WAV");
         JButton tuneButton = createStyledButton("Choose Tune");
         tuneButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -1077,13 +949,11 @@ class AddAlarmWindow extends JFrame {
         tunePanel.add(tuneButton);
         settingsPanel.add(tunePanel);
 
-        // Snooze Time Setting
         JPanel snoozePanel = createSettingPanel("Snooze Time (minutes)");
         JTextField snoozeField = createStyledTextField("1");
         snoozePanel.add(snoozeField);
         settingsPanel.add(snoozePanel);
 
-        // Number of Snoozes Setting
         JPanel snoozesPanel = createSettingPanel("Number of Snoozes");
         JTextField noOfSnoozesField = createStyledTextField("1");
         snoozesPanel.add(noOfSnoozesField);
@@ -1091,15 +961,11 @@ class AddAlarmWindow extends JFrame {
 
         mainPanel.add(settingsPanel);
 
-        // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
-
         JButton saveButton = createStyledButton("Add Alarm");
         saveButton.addActionListener(e -> {
-            String time = String.format("%02d:%02d:00",
-                    hourComboBox.getSelectedItem(),
-                    minuteComboBox.getSelectedItem());
+            String time = String.format("%02d:%02d:00", hourComboBox.getSelectedItem(), minuteComboBox.getSelectedItem());
             Alarm newAlarm = new Alarm(
                     time,
                     tuneField.getText(),
@@ -1112,7 +978,6 @@ class AddAlarmWindow extends JFrame {
 
         JButton cancelButton = createStyledButton("Cancel");
         cancelButton.addActionListener(e -> dispose());
-
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
 
@@ -1123,10 +988,8 @@ class AddAlarmWindow extends JFrame {
     private JPanel createSettingPanel(String labelText) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panel.setBackground(DARK_BG);
-
         JLabel label = createStyledLabel(labelText);
         panel.add(label);
-
         return panel;
     }
 
@@ -1160,27 +1023,19 @@ class AddAlarmWindow extends JFrame {
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Add these to ensure button styling is consistent
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-
-        // Ensure text stays black in all states
-        button.addChangeListener(e -> {
-            button.setForeground(Color.BLACK);
-        });
-
+        button.addChangeListener(e -> button.setForeground(Color.BLACK));
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE);
-                button.setForeground(Color.BLACK);  // Keep text black on hover
+                button.setForeground(Color.BLACK);
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE.darker());
-                button.setForeground(Color.BLACK);  // Keep text black when not hovering
+                button.setForeground(Color.BLACK);
             }
         });
-
         return button;
     }
 
@@ -1190,11 +1045,9 @@ class AddAlarmWindow extends JFrame {
         comboBox.setForeground(Color.BLACK);
         comboBox.setBackground(DARK_BG.brighter());
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-
         comboBox.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                          int index, boolean isSelected, boolean cellHasFocus) {
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
                 setForeground(Color.WHITE);
@@ -1202,7 +1055,6 @@ class AddAlarmWindow extends JFrame {
                 return this;
             }
         });
-
         return comboBox;
     }
 }
@@ -1232,30 +1084,24 @@ class AlarmRingWindow extends JFrame {
         setSize(400, 300);
         setLayout(new BorderLayout(10, 10));
         setLocationRelativeTo(null);
-
         setAlwaysOnTop(true);
         getContentPane().setBackground(DARK_BG);
         getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Center panel for alarm info
         JPanel centerPanel = new JPanel(new GridLayout(2, 1, 10, 10));
         centerPanel.setBackground(DARK_BG);
         centerPanel.setBorder(BorderFactory.createEmptyBorder(15, 10, 15, 10));
 
-        // Time Label
         JLabel timeLabel = createStyledLabel("Time: " + alarm.getAlarmTime());
         timeLabel.setHorizontalAlignment(SwingConstants.CENTER);
         centerPanel.add(timeLabel);
 
-        // Snooze Label
-        JLabel snoozeLabel = createStyledLabel("Snoozes remaining: " +
-                (alarm.getNoOfSnoozes() - alarm.snoozedCount));
+        JLabel snoozeLabel = createStyledLabel("Snoozes remaining: " + (alarm.getNoOfSnoozes() - alarm.snoozedCount));
         snoozeLabel.setHorizontalAlignment(SwingConstants.CENTER);
         centerPanel.add(snoozeLabel);
 
         add(centerPanel, BorderLayout.CENTER);
 
-        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
 
@@ -1266,29 +1112,22 @@ class AlarmRingWindow extends JFrame {
             dispose();
         });
 
-
         JButton snoozeButton = createStyledButton("Snooze");
         snoozeButton.addActionListener(e -> {
             if (alarm.getNoOfSnoozes() > alarm.snoozedCount) {
-                // Cancel any existing snooze timer
                 alarm.cancelSnooze();
-
-                // Start new snooze timer
                 alarm.snooze();
-                alarm.stopAlarmTune(); // Stop current alarm sound
+                alarm.stopAlarmTune();
                 dispose();
 
                 Timer snoozeTimer = new Timer(alarm.getSnoozeTime() * 60 * 1000, ev -> {
-                    // Check if window is already open or alarm is already ringing
                     if (!alarm.isSnoozing()) {
                         return;
                     }
-                    SwingUtilities.invokeLater(() -> {
-                        new AlarmRingWindow(alarm, app).setVisible(true);
-                    });
-                    alarm.cancelSnooze(); // Reset snooze state after alarm rings
+                    SwingUtilities.invokeLater(() -> new AlarmRingWindow(alarm, app).setVisible(true));
+                    alarm.cancelSnooze();
                 });
-                alarm.snoozeTimer = snoozeTimer; // Store reference to timer
+                alarm.snoozeTimer = snoozeTimer;
                 snoozeTimer.setRepeats(false);
                 snoozeTimer.start();
             } else {
@@ -1299,10 +1138,8 @@ class AlarmRingWindow extends JFrame {
             }
         });
 
-
         buttonPanel.add(snoozeButton);
         buttonPanel.add(stopButton);
-
         add(buttonPanel, BorderLayout.SOUTH);
         setVisible(true);
     }
@@ -1325,27 +1162,17 @@ class AlarmRingWindow extends JFrame {
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Add these to ensure button styling is consistent
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-
-        // Ensure text stays black in all states
-        button.addChangeListener(e -> {
-            button.setForeground(Color.BLACK);
-        });
-
+        button.addChangeListener(e -> button.setForeground(Color.BLACK));
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE);
-                button.setForeground(Color.BLACK);  // Keep text black on hover
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 button.setBackground(NEON_BLUE.darker());
-                button.setForeground(Color.BLACK);  // Keep text black when not hovering
             }
         });
-
         return button;
     }
 
@@ -1367,7 +1194,6 @@ class AlarmRingWindow extends JFrame {
 
         dialog.add(messageLabel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
-
         dialog.setSize(300, 150);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
