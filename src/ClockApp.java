@@ -4,6 +4,8 @@ import javax.sound.sampled.Clip;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ public class ClockApp extends JFrame {
     private final Font DIGITAL_FONT = new Font("DS-Digital", Font.BOLD, 72);
     private final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 14);
     private JPanel timePanel;
+    private final Color NEON_ORANGE = new Color(255, 159, 0);
 
     public ClockApp() {
         clock = new Clock();
@@ -33,7 +36,7 @@ public class ClockApp extends JFrame {
 
     private void setupMainWindow() {
         setTitle("Digital Clock");
-        setSize(500, 300);
+        setSize(700, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(20, 20));
         getContentPane().setBackground(DARK_BG);
@@ -118,13 +121,32 @@ public class ClockApp extends JFrame {
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(DARK_BG);
         buttonPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
+
         JButton settingsButton = createStyledButton("Settings", NEON_BLUE);
-        settingsButton.addActionListener(e -> openSettingsWindow());
         JButton alarmsButton = createStyledButton("Alarms", NEON_PURPLE);
+        JButton timerButton = createStyledButton("Timer", NEON_BLUE);
+        JButton stopwatchButton = createStyledButton("Stopwatch", NEON_ORANGE);
+
+        settingsButton.addActionListener(e -> openSettingsWindow());
         alarmsButton.addActionListener(e -> openAlarmManagementWindow());
+        timerButton.addActionListener(e -> openTimerWindow());
+        stopwatchButton.addActionListener(e -> openStopwatchWindow());
+
         buttonPanel.add(settingsButton);
         buttonPanel.add(alarmsButton);
+        buttonPanel.add(timerButton);
+        buttonPanel.add(stopwatchButton);
         add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private void openStopwatchWindow() {
+        StopwatchWindow stopwatchWindow = new StopwatchWindow();
+        stopwatchWindow.setVisible(true);
+    }
+
+    private void openTimerWindow() {
+        TimerWindow timerWindow = new TimerWindow();
+        timerWindow.setVisible(true);
     }
 
     private void startClockTimer() {
@@ -224,6 +246,496 @@ public class ClockApp extends JFrame {
             e.printStackTrace();
         }
         SwingUtilities.invokeLater(() -> new ClockApp().setVisible(true));
+    }
+}
+
+class TimerWindow extends JFrame {
+    private Timer countdownTimer;
+    private JLabel timerLabel;
+    private int remainingSeconds;
+    private boolean isTimerRunning;
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_GREEN = new Color(0, 255, 128);
+    private final Color NEON_RED = new Color(255, 69, 58);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font DIGITAL_FONT = new Font("DS-Digital", Font.BOLD, 72);
+    private JButton startPauseButton;
+    private JButton resetButton;
+    private JSpinner minutesSpinner;
+    private JSpinner secondsSpinner;
+    private int initialSeconds;
+
+    public TimerWindow() {
+        setupWindow();
+        setupTimerDisplay();
+        setupControls();
+        setupButtonPanel();
+    }
+
+    private void setupWindow() {
+        setTitle("Timer");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(20, 20));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(new EmptyBorder(20, 20, 20, 20));
+        setLocationRelativeTo(null);
+
+        // Handle window closing
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (countdownTimer != null) {
+                    countdownTimer.stop();
+                }
+            }
+        });
+    }
+
+    private void setupTimerDisplay() {
+        JPanel timerPanel = new JPanel(new BorderLayout());
+        timerPanel.setBackground(DARK_BG);
+
+        timerLabel = new JLabel("00:00", SwingConstants.CENTER);
+        try {
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("fonts/DS-Digital.ttf")));
+            timerLabel.setFont(DIGITAL_FONT);
+        } catch (Exception e) {
+            timerLabel.setFont(new Font("Monospaced", Font.BOLD, 72));
+        }
+        timerLabel.setForeground(NEON_PURPLE);
+        timerLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_GREEN, 2),
+                new EmptyBorder(20, 40, 20, 40)
+        ));
+
+        timerPanel.add(timerLabel, BorderLayout.CENTER);
+        add(timerPanel, BorderLayout.CENTER);
+    }
+
+    private void setupControls() {
+        JPanel controlsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        controlsPanel.setBackground(DARK_BG);
+
+        SpinnerNumberModel minutesModel = new SpinnerNumberModel(0, 0, 59, 1);
+        SpinnerNumberModel secondsModel = new SpinnerNumberModel(0, 0, 59, 1);
+
+        minutesSpinner = new JSpinner(minutesModel);
+        secondsSpinner = new JSpinner(secondsModel);
+
+        JLabel minutesLabel = new JLabel("Minutes:");
+        JLabel secondsLabel = new JLabel("Seconds:");
+        minutesLabel.setForeground(Color.WHITE);
+        secondsLabel.setForeground(Color.WHITE);
+
+        // Style the spinners
+        styleSpinner(minutesSpinner);
+        styleSpinner(secondsSpinner);
+
+        controlsPanel.add(minutesLabel);
+        controlsPanel.add(minutesSpinner);
+        controlsPanel.add(secondsLabel);
+        controlsPanel.add(secondsSpinner);
+
+        add(controlsPanel, BorderLayout.NORTH);
+    }
+
+    private void styleSpinner(JSpinner spinner) {
+        spinner.setPreferredSize(new Dimension(60, 30));
+        Component editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor) {
+            JTextField textField = ((JSpinner.DefaultEditor)editor).getTextField();
+            textField.setBackground(DARK_BG);
+            textField.setForeground(Color.WHITE);
+            textField.setCaretColor(Color.WHITE);
+            textField.setBorder(BorderFactory.createLineBorder(NEON_GREEN));
+        }
+    }
+
+    private void setupButtonPanel() {
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
+
+        startPauseButton = createStyledButton("Start", NEON_GREEN);
+        resetButton = createStyledButton("Reset", NEON_RED);
+        resetButton.setEnabled(false);
+
+        startPauseButton.addActionListener(e -> handleStartPause());
+        resetButton.addActionListener(e -> handleReset());
+
+        buttonPanel.add(startPauseButton);
+        buttonPanel.add(resetButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private JButton createStyledButton(String text, Color mainColor) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, mainColor.darker(), 0, getHeight(), mainColor.darker().darker());
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2d.setColor(new Color(mainColor.getRed(), mainColor.getGreen(), mainColor.getBlue(), 50));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 20, 20);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+            }
+        };
+        button.setPreferredSize(new Dimension(100, 40));
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setForeground(Color.WHITE);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void handleStartPause() {
+        if (!isTimerRunning) {
+            int minutes = (Integer) minutesSpinner.getValue();
+            int seconds = (Integer) secondsSpinner.getValue();
+
+            if (minutes == 0 && seconds == 0) {
+                JOptionPane.showMessageDialog(this, "Please set a time greater than 0");
+                return;
+            }
+
+            if (remainingSeconds == 0) {
+                initialSeconds = minutes * 60 + seconds;
+                remainingSeconds = initialSeconds;
+            }
+
+            startTimer();
+        } else {
+            pauseTimer();
+        }
+    }
+
+    private void startTimer() {
+        isTimerRunning = true;
+        startPauseButton.setText("Pause");
+        resetButton.setEnabled(true);
+        minutesSpinner.setEnabled(false);
+        secondsSpinner.setEnabled(false);
+
+        countdownTimer = new Timer(1000, e -> {
+            remainingSeconds--;
+            updateTimerDisplay();
+
+            if (remainingSeconds <= 0) {
+                timerComplete();
+            }
+        });
+        countdownTimer.start();
+    }
+
+    private void pauseTimer() {
+        isTimerRunning = false;
+        countdownTimer.stop();
+        startPauseButton.setText("Resume");
+    }
+
+    private void handleReset() {
+        if (countdownTimer != null) {
+            countdownTimer.stop();
+        }
+        isTimerRunning = false;
+        remainingSeconds = 0;
+        startPauseButton.setText("Start");
+        resetButton.setEnabled(false);
+        minutesSpinner.setEnabled(true);
+        secondsSpinner.setEnabled(true);
+        minutesSpinner.setValue(0);
+        secondsSpinner.setValue(0);
+        updateTimerDisplay();
+    }
+
+    private void updateTimerDisplay() {
+        int minutes = remainingSeconds / 60;
+        int seconds = remainingSeconds % 60;
+        timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+    }
+
+    private void timerComplete() {
+        countdownTimer.stop();
+        isTimerRunning = false;
+        playAlarmSound();
+        timerLabel.setForeground(NEON_RED);
+        startPauseButton.setText("Start");
+        JOptionPane.showMessageDialog(this, "Timer Complete!");
+        handleReset();
+        timerLabel.setForeground(NEON_PURPLE);
+    }
+
+    private void playAlarmSound() {
+        try {
+            File soundFile = new File("D:\\Java\\clock2\\AlarmSound\\default_alarm.WAV");
+            if (soundFile.exists()) {
+                AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioIn);
+                clip.start();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class StopwatchWindow extends JFrame {
+    private Timer stopwatchTimer;
+    private JLabel timeLabel;
+    private JLabel millisecondsLabel;
+    private boolean isRunning;
+    private int hours;
+    private int minutes;
+    private int seconds;
+    private int milliseconds;
+    private JButton startPauseButton;
+    private JButton resetButton;
+    private JButton lapButton;
+    private JList<String> lapList;
+    private DefaultListModel<String> lapListModel;
+    private List<Long> lapTimes;
+    private long startTime;
+    private long elapsedTime;
+
+    private final Color NEON_PURPLE = new Color(187, 134, 252);
+    private final Color NEON_GREEN = new Color(0, 255, 128);
+    private final Color NEON_RED = new Color(255, 69, 58);
+    private final Color DARK_BG = new Color(18, 18, 18);
+    private final Font DIGITAL_FONT = new Font("DS-Digital", Font.BOLD, 72);
+
+    public StopwatchWindow() {
+        lapTimes = new ArrayList<>();
+        setupWindow();
+        setupStopwatchDisplay();
+        setupLapDisplay();
+        setupButtonPanel();
+    }
+
+    private void setupWindow() {
+        setTitle("Stopwatch");
+        setSize(500, 500);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(20, 20));
+        getContentPane().setBackground(DARK_BG);
+        getRootPane().setBorder(new EmptyBorder(20, 20, 20, 20));
+        setLocationRelativeTo(null);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (stopwatchTimer != null) {
+                    stopwatchTimer.stop();
+                }
+            }
+        });
+    }
+
+    private void setupStopwatchDisplay() {
+        JPanel timePanel = new JPanel(new BorderLayout());
+        timePanel.setBackground(DARK_BG);
+
+        timeLabel = new JLabel("00:00:00", SwingConstants.CENTER);
+        millisecondsLabel = new JLabel(".000", SwingConstants.LEFT);
+
+        try {
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("fonts/DS-Digital.ttf")));
+            timeLabel.setFont(DIGITAL_FONT);
+            millisecondsLabel.setFont(DIGITAL_FONT.deriveFont(48f));
+        } catch (Exception e) {
+            timeLabel.setFont(new Font("Monospaced", Font.BOLD, 72));
+            millisecondsLabel.setFont(new Font("Monospaced", Font.BOLD, 48));
+        }
+
+        timeLabel.setForeground(NEON_PURPLE);
+        millisecondsLabel.setForeground(NEON_PURPLE);
+
+        JPanel displayPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        displayPanel.setBackground(DARK_BG);
+        displayPanel.add(timeLabel);
+        displayPanel.add(millisecondsLabel);
+
+        displayPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(NEON_GREEN, 2),
+                new EmptyBorder(20, 40, 20, 40)
+        ));
+
+        timePanel.add(displayPanel, BorderLayout.CENTER);
+        add(timePanel, BorderLayout.NORTH);
+    }
+
+    private void setupLapDisplay() {
+        lapListModel = new DefaultListModel<>();
+        lapList = new JList<>(lapListModel);
+        lapList.setBackground(DARK_BG);
+        lapList.setForeground(Color.WHITE);
+        lapList.setFont(new Font("Monospaced", Font.PLAIN, 16));
+        lapList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        JScrollPane scrollPane = new JScrollPane(lapList);
+        scrollPane.setBackground(DARK_BG);
+        scrollPane.getViewport().setBackground(DARK_BG);
+        scrollPane.setBorder(BorderFactory.createLineBorder(NEON_GREEN, 1));
+
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void setupButtonPanel() {
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(DARK_BG);
+
+        startPauseButton = createStyledButton("Start", NEON_GREEN);
+        resetButton = createStyledButton("Reset", NEON_RED);
+        lapButton = createStyledButton("Lap", NEON_PURPLE);
+
+        resetButton.setEnabled(false);
+        lapButton.setEnabled(false);
+
+        startPauseButton.addActionListener(e -> handleStartPause());
+        resetButton.addActionListener(e -> handleReset());
+        lapButton.addActionListener(e -> handleLap());
+
+        buttonPanel.add(startPauseButton);
+        buttonPanel.add(lapButton);
+        buttonPanel.add(resetButton);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private JButton createStyledButton(String text, Color mainColor) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, mainColor.darker(), 0, getHeight(), mainColor.darker().darker());
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2d.setColor(new Color(mainColor.getRed(), mainColor.getGreen(), mainColor.getBlue(), 50));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 20, 20);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+            }
+        };
+        button.setPreferredSize(new Dimension(100, 40));
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setForeground(Color.WHITE);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void handleStartPause() {
+        if (!isRunning) {
+            startStopwatch();
+        } else {
+            pauseStopwatch();
+        }
+    }
+
+    private void startStopwatch() {
+        if (!isRunning) {
+            isRunning = true;
+            startPauseButton.setText("Pause");
+            resetButton.setEnabled(true);
+            lapButton.setEnabled(true);
+
+            if (startTime == 0) {
+                startTime = System.currentTimeMillis() - elapsedTime;
+            } else {
+                startTime = System.currentTimeMillis() - elapsedTime;
+            }
+
+            stopwatchTimer = new Timer(1, e -> updateDisplay());
+            stopwatchTimer.start();
+        }
+    }
+
+    private void pauseStopwatch() {
+        if (isRunning) {
+            isRunning = false;
+            stopwatchTimer.stop();
+            startPauseButton.setText("Resume");
+            elapsedTime = System.currentTimeMillis() - startTime;
+        }
+    }
+
+    private void handleReset() {
+        if (stopwatchTimer != null) {
+            stopwatchTimer.stop();
+        }
+        isRunning = false;
+        startTime = System.currentTimeMillis() ;
+        elapsedTime = 0;
+        hours = 0;
+        minutes = 0;
+        seconds = 0;
+        milliseconds = 0;
+        lapTimes.clear();
+        lapListModel.clear();
+        updateDisplay();
+        startPauseButton.setText("Start");
+        resetButton.setEnabled(false);
+        lapButton.setEnabled(false);
+    }
+
+    private void handleLap() {
+        if (isRunning) {
+            long currentTime = System.currentTimeMillis() - startTime;
+            lapTimes.add(currentTime);
+
+            // Calculate lap time
+            long lapTime = currentTime;
+            if (lapTimes.size() > 1) {
+                lapTime = currentTime - lapTimes.get(lapTimes.size() - 2);
+            }
+
+            String lapTimeStr = formatTime(lapTime);
+            String totalTimeStr = formatTime(currentTime);
+
+            lapListModel.insertElementAt(
+                    String.format("Lap %d    %s    Total: %s",
+                            lapTimes.size(), lapTimeStr, totalTimeStr),
+                    0
+            );
+        }
+    }
+
+    private void updateDisplay() {
+        long currentTime = System.currentTimeMillis() - startTime;
+        hours = (int) (currentTime / 3600000);
+        minutes = (int) ((currentTime / 60000) % 60);
+        seconds = (int) ((currentTime / 1000) % 60);
+        milliseconds = (int) (currentTime % 1000);
+
+        timeLabel.setText(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+        millisecondsLabel.setText(String.format(".%03d", milliseconds));
+    }
+
+    private String formatTime(long timeInMillis) {
+        long hours = timeInMillis / 3600000;
+        long minutes = (timeInMillis / 60000) % 60;
+        long seconds = (timeInMillis / 1000) % 60;
+        long millis = timeInMillis % 1000;
+
+        return String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
     }
 }
 
@@ -674,16 +1186,6 @@ class ClockSettings extends JFrame {
         comboBox.setForeground(Color.BLACK);
         comboBox.setBackground(NEON_BLUE);
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-        comboBox.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
-                setForeground(Color.WHITE);
-                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                return this;
-            }
-        });
         return comboBox;
     }
 
@@ -870,23 +1372,12 @@ class EditAlarmWindow extends JFrame {
         comboBox.setForeground(Color.BLACK);
         comboBox.setBackground(DARK_BG.brighter());
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-        comboBox.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
-                setForeground(Color.WHITE);
-                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                return this;
-            }
-        });
         return comboBox;
     }
 }
 
 class AddAlarmWindow extends JFrame {
     private final ClockApp app;
-    private final Color NEON_PURPLE = new Color(187, 134, 252);
     private final Color NEON_BLUE = new Color(3, 218, 247);
     private final Color DARK_BG = new Color(18, 18, 18);
     private final Font SETTINGS_FONT = new Font("Segoe UI", Font.PLAIN, 14);
@@ -937,7 +1428,7 @@ class AddAlarmWindow extends JFrame {
         settingsPanel.add(timePanel);
 
         JPanel tunePanel = createSettingPanel("Alarm Tune");
-        JTextField tuneField = createStyledTextField("D:\\Java\\clock2\\AlarmSound\\default_alarm.WAV");
+        JTextField tuneField = createStyledTextField("./AlarmSound/default_alarm.WAV");
         JButton tuneButton = createStyledButton("Choose Tune");
         tuneButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -1045,16 +1536,6 @@ class AddAlarmWindow extends JFrame {
         comboBox.setForeground(Color.BLACK);
         comboBox.setBackground(DARK_BG.brighter());
         comboBox.setBorder(BorderFactory.createLineBorder(NEON_BLUE, 1));
-        comboBox.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? NEON_BLUE.darker() : DARK_BG);
-                setForeground(Color.WHITE);
-                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                return this;
-            }
-        });
         return comboBox;
     }
 }
